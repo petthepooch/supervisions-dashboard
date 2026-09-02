@@ -209,7 +209,7 @@ const TREND = [
 ];
 
 const ANNOUNCEMENTS = [
-  { text: 'The myAko mobile app is now available for iOS and Android.', more: 'Find out more' },
-  { text: 'CQC inspection window opens 1 October. Export your Q1 evidence pack by 25 September.', more: 'Open Reporting Suite' },
-  { text: 'Supervision templates were updated on 20 August. New records use the updated wellbeing section.', more: 'See what changed' },
+  { text: 'The myAko mobile app is now available for iOS and Android.', more: 'Download', href: '/dashboard' },
+  { text: 'Supervision templates were updated on 20 August. New records use the updated wellbeing section.', more: 'See what changed', href: '/supervisions/new' },
+  { text: 'Planned maintenance Sunday 14 September, 02:00 to 04:00. myAko will be read-only.', more: 'Details', href: '/dashboard' },
 ];

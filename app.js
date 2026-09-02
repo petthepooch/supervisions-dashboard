@@ -131,6 +131,7 @@ const state = {
   announceIdx: 0,
   announceHidden: false,
   openGroup: null,
+  trendRange: '12m',
 };
 
 /* Navigation model ----------------------------------------------- */
@@ -194,6 +195,10 @@ const ICONS = {
   sortUp: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 19V5M8 9l4-4 4 4"/></svg>',
   left: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>',
   right: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+  calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+  mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 8l9 6 9-6"/></svg>',
+  chevR: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+  warnTri: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3l9-16zM12 10v4M12 17h.01"/></svg>',
   sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
 };
 const ico = (n) => ICONS[n] || '';
@@ -233,7 +238,7 @@ function renderTopbar(s) {
   const a = $('#announce');
   a.hidden = state.announceHidden;
   const item = ANNOUNCEMENTS[state.announceIdx];
-  $('#announce-text').innerHTML = `${esc(item.text)}<a href="#/reports/suite" data-nav>${esc(item.more)}</a>`;
+  $('#announce-text').innerHTML = `${esc(item.text)}<a href="#${item.href || '/dashboard'}" data-nav>${esc(item.more)}</a>`;
   $('#announce-count').textContent = `${state.announceIdx + 1} of ${ANNOUNCEMENTS.length}`;
 }
 
@@ -290,42 +295,68 @@ function focusCards(s) {
     why: 'Inspection window opens 1 October. Export needs signed-off records only.',
     cta: 'Open reporting suite', action: `data-go="/reports/suite"`, pill: `<span class="pill accent plain">Due 25 Sep</span>`,
   });
+  const kindIcon = { Chase: 'mail', 'Sign off': 'check', Decision: 'calendar', Safeguarding: 'shield', Report: 'download' };
   return `<div class="focus">${cards.slice(0, 4).map((c) => `
     <button class="focus-card ${c.tone}" ${c.action}>
-      <div class="top"><span class="kind">${c.kind}</span>${c.pill}</div>
+      <div class="top"><span class="tile">${ico(kindIcon[c.kind] || 'tasks')}</span>${c.pill}</div>
+      <span class="kind">${c.kind}</span>
       <div class="title">${esc(c.title)}</div>
       <div class="why">${esc(c.why)}</div>
       <div class="foot"><span class="cta">${c.cta}${ico('arrow')}</span></div>
     </button>`).join('')}</div>`;
 }
 
+function sparkline(values, cls = '') {
+  // 12-point sparkline; the last point is the current period and gets a dot.
+  const W = 220, H = 30, P = 4;
+  const min = Math.min(...values), max = Math.max(...values);
+  const x = (i) => P + (i * (W - 2 * P)) / (values.length - 1);
+  const y = (v) => max === min ? H / 2 : P + (1 - (v - min) / (max - min)) * (H - 2 * P);
+  const dpath = values.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><path class="l ${cls}" d="${dpath}"/><circle class="e ${cls}" cx="${x(values.length - 1)}" cy="${y(values[values.length - 1])}" r="4"/></svg>`;
+}
+function flatline() {
+  return `<svg viewBox="0 0 220 30" preserveAspectRatio="none" aria-hidden="true"><line class="dash" x1="4" y1="15" x2="216" y2="15"/></svg>`;
+}
+
 function statsRow(s) {
   const a = s.active.length;
-  const tone = s.compliance >= 0.9 ? 'good' : s.compliance >= 0.75 ? 'warn' : 'crit';
+  const trend = [...TREND.slice(-11).map((t) => t.v), s.compliance];
+  const label = (t, scroll) => `<span class="k">${t} ${ico('chevR')}</span>`;
   return `<div class="stats">
-    <button class="stat tone-${tone}" data-scroll="cycle">
-      <span class="k">Team compliance</span>
+    <button class="stat" data-scroll="trend">
+      ${label('Team compliance')}
       <span class="v num">${pct(s.compliance)}<small>${s.compliantCount} of ${a} in date</small></span>
-      <span class="meter"><i style="width:${(s.signedOff / a) * 100}%"></i><i class="info" style="width:${((s.compliantCount - s.signedOff) / a) * 100}%"></i><i class="crit" style="width:${((a - s.compliantCount) / a) * 100}%"></i></span>
-      <span class="d">${s.signedOff} signed off this quarter, ${s.compliantCount - s.signedOff} in date and booked or drafting</span>
+      <div class="spark">${sparkline(trend)}</div>
     </button>
-    <button class="stat ${s.openActions ? 'tone-warn' : 'tone-good'}" data-scroll="attention">
-      <span class="k">Open actions</span>
+    <button class="stat" data-scroll="cycle">
+      ${label('Signed off this quarter')}
+      <span class="v num">${s.signedOff}<small>of ${a}</small></span>
+      <span class="d">${s.booked} booked · ${s.drafting} drafting · ${s.notBooked} not booked</span>
+      <div class="spark"><div class="meter thin" style="margin-top:0"><i style="width:${(s.signedOff / a) * 100}%"></i><i class="accent" style="width:${(s.booked / a) * 100}%"></i><i class="muted" style="width:${(s.drafting / a) * 100}%"></i></div></div>
+    </button>
+    <button class="stat" data-scroll="attention">
+      ${label('Awaiting your sign off')}
+      <span class="v num">${s.review.length}<small>${s.review.length ? s.review.map((p) => p.name.split(' ')[0]).join(', ') : 'nothing waiting'}</small></span>
+      <span class="d">${s.review.length ? 'Counts towards compliance once signed.' : 'You are up to date.'}</span>
+      <div class="spark">${s.review.length ? '' : flatline()}</div>
+    </button>
+    <button class="stat ${s.overdue.length ? 'hl' : ''}" data-scroll="attention">
+      ${label('Overdue')}
+      <span class="v num">${s.overdue.length}${s.overdue.length ? ico('warnTri').replace('<svg ', '<svg class="warn-ico" ') : ''}<small>${s.overdue.length ? s.overdue.map((p) => p.name).join(', ') : 'nobody'}</small></span>
+      ${s.overdue.length ? `<div class="cta"><span class="btn sm warn">${ico('mail')} Chase now</span></div>` : `<span class="d">${s.atRisk.length ? `${plural(s.atRisk.length, 'person', 'people')} due within ${POLICY.atRiskDays} days` : `Nobody due within ${POLICY.atRiskDays} days`}</span><div class="spark">${flatline()}</div>`}
+    </button>
+    <button class="stat" data-scroll="attention">
+      ${label('Open actions')}
       <span class="v num">${s.openActions}<small>need you</small></span>
-      <span class="d">${plural(s.overdue.length, 'overdue')} · ${s.review.length} awaiting sign off · ${plural(s.openFlags.length, 'safeguarding flag')} · ${plural(s.decisions.length, 'decision')}</span>
-      <span class="link">Work through them</span>
-    </button>
-    <button class="stat ${s.overdue.length ? 'tone-crit' : 'tone-good'}" data-scroll="attention">
-      <span class="k">Overdue</span>
-      <span class="v num">${s.overdue.length}<small>${s.overdue.length ? s.overdue.map((p) => p.name).join(', ') : 'nobody'}</small></span>
-      <span class="d">${s.atRisk.length ? `${plural(s.atRisk.length, 'person', 'people')} due within ${POLICY.atRiskDays} days: ${s.atRisk.map((p) => p.name.split(' ')[0]).join(', ')}` : `Nobody due within ${POLICY.atRiskDays} days`}</span>
-      <span class="link">${s.overdue.length ? 'Chase now' : 'View cycle'}</span>
+      <span class="d">${plural(s.overdue.length, 'overdue')} · ${s.review.length} to sign off · ${plural(s.openFlags.length, 'flag')} · ${plural(s.decisions.length, 'decision')}</span>
+      <div class="spark">${sparkline([2, 3, 3, 4, 2, 1, 2, 3, 5, 4, 3, s.openActions], s.openActions ? '' : 'good')}</div>
     </button>
     <button class="stat" data-go="/development/pdps">
-      <span class="k">PDP progress</span>
+      ${label('PDP progress')}
       <span class="v num">${pct(pdpProgress(s))}<small>objectives complete</small></span>
-      <span class="meter"><i style="width:${pdpProgress(s) * 100}%"></i></span>
-      <span class="d">${s.people.filter((p) => d(p.pdp.review) <= addDays(TODAY, 30)).length} PDP reviews due in the next 30 days</span>
+      <span class="d">${s.people.filter((p) => d(p.pdp.review) <= addDays(TODAY, 30)).length} reviews due in the next 30 days</span>
+      <div class="spark"><div class="meter thin" style="margin-top:0"><i style="width:${pdpProgress(s) * 100}%"></i></div></div>
     </button>
   </div>`;
 }
@@ -525,32 +556,79 @@ function calendarCard(s) {
 
 /* Trend chart ---------------------------------------------------- */
 
+function trendSeries(s) {
+  const all = [...TREND, { m: 'Sep', y: 2026, v: s.compliance, live: true }];
+  if (state.trendRange === '6m') return all.slice(-6);
+  if (state.trendRange === 'fy') return all.filter((p) => p.y === 2026 && ['Jul', 'Aug', 'Sep'].includes(p.m));
+  return all;
+}
+
 function trendCard(s) {
-  const pts = [...TREND, { m: 'Sep', y: 2026, v: s.compliance, live: true }];
-  const W = 560, H = 190, L = 34, R = 16, T = 18, B = 30;
-  const x = (i) => L + (i * (W - L - R)) / (pts.length - 1);
-  const y = (v) => T + (1 - (v - 0.5) / 0.5) * (H - T - B);
-  const path = pts.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join(' ');
-  const area = `${path} L${x(pts.length - 1).toFixed(1)},${y(0.5)} L${x(0)},${y(0.5)} Z`;
-  const grid = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+  const pts = trendSeries(s);
+  const W = 640, H = 200, L = 36, R = 44, T = 16, B = 28;
+  const lo = 0.5, hi = 1;
+  const x = (i) => L + (i * (W - L - R)) / Math.max(1, pts.length - 1);
+  const y = (v) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+  // Monotone cubic through the points keeps the line smooth without overshooting.
+  const P = pts.map((p, i) => [x(i), y(p.v)]);
+  let dpath = `M${P[0][0].toFixed(1)},${P[0][1].toFixed(1)}`;
+  for (let i = 0; i < P.length - 1; i++) {
+    const [x0, y0] = P[i], [x1, y1] = P[i + 1];
+    const cx = ((x1 - x0) / 2).toFixed(1);
+    dpath += ` C${(x0 + +cx).toFixed(1)},${y0.toFixed(1)} ${(x1 - +cx).toFixed(1)},${y1.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`;
+  }
+  const area = `${dpath} L${P[P.length - 1][0].toFixed(1)},${y(lo)} L${P[0][0].toFixed(1)},${y(lo)} Z`;
   const target = 0.9;
-  const last = pts[pts.length - 1], prev = pts[pts.length - 2];
+  const last = pts[pts.length - 1], prev = pts[pts.length - 2] || last;
   const delta = Math.round((last.v - prev.v) * 100);
-  const fyStart = pts.findIndex((p) => p.m === 'Jul' && p.y === 2026);
+  const below = pts.filter((p) => p.v < target).length;
+  const best = pts.reduce((m, p) => (p.v > m.v ? p : m), pts[0]);
+  const seg = (k, l) => `<button class="${state.trendRange === k ? 'active' : ''}" data-range="${k}">${l}</button>`;
+  const step = (W - L - R) / Math.max(1, pts.length - 1);
   return `<div class="card trend">
-    <div class="trend-head"><div class="big num">${pct(s.compliance)}<small>team compliance today</small></div><span class="fy">${s.q.fy} · target 90%</span></div>
-    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Compliance trend over the last twelve months">
-      ${grid.map((g) => `<line class="grid-line" x1="${L}" x2="${W - R}" y1="${y(g)}" y2="${y(g)}"/><text x="${L - 6}" y="${y(g) + 3.5}" text-anchor="end">${Math.round(g * 100)}</text>`).join('')}
-      <line class="target" x1="${L}" x2="${W - R}" y1="${y(target)}" y2="${y(target)}"/><text class="tg" x="${W - R}" y="${y(target) - 5}" text-anchor="end">target</text>
-      ${fyStart > 0 ? `<line class="grid-line" x1="${x(fyStart) - 0.5}" x2="${x(fyStart) - 0.5}" y1="${T}" y2="${H - B + 4}" stroke-dasharray="2 3"/><text x="${x(fyStart) + 4}" y="${T + 8}">FY start</text>` : ''}
-      <path class="area" d="${area}"/><path class="line" d="${path}"/>
-      ${pts.map((p, i) => `<circle class="pt ${p.live ? 'end' : ''}" cx="${x(i)}" cy="${y(p.v)}" r="3"/>`).join('')}
-      <text class="lbl" x="${x(pts.length - 1)}" y="${y(last.v) - 10}" text-anchor="end">${pct(last.v)}</text>
-      ${pts.map((p, i) => `<text x="${x(i)}" y="${H - 8}" text-anchor="middle">${p.m}</text>`).join('')}
-    </svg>
-    <div class="trend-foot"><span>${delta >= 0 ? 'Up' : 'Down'} <b>${Math.abs(delta)} points</b> on August</span><span>Best: <b>100%</b> in June</span><span>Below target <b>${pts.filter((p) => p.v < target).length}</b> of ${pts.length} months</span></div>
+    <div class="trend-head">
+      <div><span class="k">Team compliance ${ico('chevR')}</span>
+        <div class="big num">${pct(s.compliance)}<small>today</small><span class="delta ${delta > 0 ? 'up' : delta < 0 ? 'down' : ''}">${delta === 0 ? `Unchanged since ${prev.m}` : `${delta > 0 ? '↑' : '↓'} ${Math.abs(delta)} pts on ${prev.m}`}</span></div></div>
+      <div class="seg">${seg('6m', '6m')}${seg('12m', '12m')}${seg('fy', s.q.fy.replace('FY ', 'FY'))}</div>
+    </div>
+    <div class="trend-plot">
+      <div class="tip" id="trend-tip"></div>
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Team compliance by month">
+        <defs><linearGradient id="trend-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity="0.16"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
+        ${[0.5, 0.75, 1].map((g) => `<line class="grid-line" x1="${L}" x2="${W - R}" y1="${y(g)}" y2="${y(g)}"/><text x="${L - 8}" y="${y(g) + 4}" text-anchor="end">${Math.round(g * 100)}%</text>`).join('')}
+        <line class="target" x1="${L}" x2="${W - R}" y1="${y(target)}" y2="${y(target)}"/><text class="tg" x="${W - R + 6}" y="${y(target) + 4}">Target</text>
+        <path class="area" d="${area}"/><path class="line" d="${dpath}"/>
+        <line class="xh" id="trend-xh" x1="0" x2="0" y1="${T}" y2="${H - B + 6}"/>
+        ${pts.map((p, i) => `<circle class="pt ${p.live ? 'end' : ''}" data-i="${i}" cx="${x(i)}" cy="${y(p.v)}" r="4"/>`).join('')}
+        <text class="lbl" x="${x(pts.length - 1) + 8}" y="${y(last.v) + 4}">${pct(last.v)}</text>
+        ${pts.map((p, i) => `<text class="x" data-i="${i}" x="${x(i)}" y="${H - 6}" text-anchor="middle">${p.m}${p.m === 'Jan' ? ` ${String(p.y).slice(2)}` : ''}</text>`).join('')}
+        ${pts.map((p, i) => `<rect class="hit" data-i="${i}" x="${x(i) - step / 2}" y="0" width="${step}" height="${H}"/>`).join('')}
+      </svg>
+    </div>
+    <div class="trend-foot"><span class="key"><i></i>Share of active staff in date at month end</span><span class="key"><i class="t"></i>Target 90%</span><span>Best <b>${pct(best.v)}</b> in ${best.m}</span><span>Below target <b>${below}</b> of ${pts.length} months</span></div>
   </div>`;
 }
+
+function trendHover(e) {
+  const hit = e.target.closest('.trend .hit');
+  const card = e.target.closest('.trend');
+  const tip = card && card.querySelector('#trend-tip');
+  if (!card) return;
+  const pts = trendSeries(derive());
+  card.querySelectorAll('.pt.on, .x.on, .xh.on').forEach((el) => el.classList.remove('on'));
+  if (!hit) { tip && tip.classList.remove('on'); return; }
+  const i = Number(hit.dataset.i); const p = pts[i];
+  const dot = card.querySelector(`.pt[data-i="${i}"]`); const xl = card.querySelector(`.x[data-i="${i}"]`); const xh = card.querySelector('#trend-xh');
+  dot.classList.add('on'); xl.classList.add('on');
+  xh.setAttribute('x1', dot.getAttribute('cx')); xh.setAttribute('x2', dot.getAttribute('cx')); xh.classList.add('on');
+  const svgRect = card.querySelector('svg').getBoundingClientRect(); const plot = card.querySelector('.trend-plot').getBoundingClientRect();
+  const dr = dot.getBoundingClientRect();
+  tip.style.left = `${dr.left + dr.width / 2 - plot.left}px`; tip.style.top = `${dr.top - plot.top}px`;
+  tip.innerHTML = `<b>${pct(p.v)}</b><span>${p.m} ${p.y}${p.live ? ' · today' : ''}</span>`;
+  tip.classList.add('on');
+}
+document.addEventListener('pointermove', trendHover);
+document.addEventListener('pointerleave', trendHover, true);
 
 /* Pages ---------------------------------------------------------- */
 
@@ -756,7 +834,7 @@ function renderPanel(s) {
     let list = MESSAGES;
     if (state.msgFilter === 'unread') list = list.filter((m) => m.unread);
     body.innerHTML = `<div class="msg-filters"><button class="chip ${state.msgFilter === 'all' ? 'active' : ''}" data-msg-filter="all">All <span class="n">${MESSAGES.length}</span></button><button class="chip ${state.msgFilter === 'unread' ? 'active' : ''}" data-msg-filter="unread">Unread <span class="n">${s.unread}</span></button></div>
-      ${list.map((m) => { const p = byId(m.person); return `<button class="msg ${m.unread ? 'unread' : ''}" data-thread="${m.id}">${avatar(p)}<div><div class="h"><strong>${esc(p.name)}</strong></div><div class="role">${esc(p.role)}</div><div class="t">${esc(m.text)}</div></div><div class="when"><span>${m.when}</span>${m.unread ? '<span class="unread-dot"></span>' : ''}</div></button>`; }).join('') || '<div class="empty">No unread messages.</div>'}`;
+      ${list.map((m) => { const p = byId(m.person); return `<button class="msg ${m.unread ? 'unread' : ''}" data-thread="${m.id}">${avatar(p)}<div><div class="when"><span>${m.when}</span>${m.unread ? '<span class="unread-dot"></span>' : ''}</div><div class="h"><strong>${esc(p.name)} ${m.unread ? ico('arrow') : ''}</strong></div><div class="role">${esc(p.role)}</div><div class="t">${esc(m.text)}</div></div></button>`; }).join('') || '<div class="empty">No unread messages.</div>'}`;
   } else if (state.panelMode === 'thread') {
     const m = MESSAGES.find((x) => x.id === state.panelArg); const p = byId(m.person);
     head.innerHTML = `Conversation`;
@@ -896,7 +974,7 @@ function openPanel(mode, arg = null) {
 }
 
 document.addEventListener('click', (e) => {
-  const t = e.target.closest('[data-group],[data-scroll],[data-go],[data-person],[data-act],[data-thread],[data-msg-filter],[data-cycle-filter],[data-sort],[data-cal],[data-message],[data-nav],#btn-menu,#btn-chat,#btn-notes,#panel-close,#panel-back,#scrim,#announce-prev,#announce-next,#announce-close,#btn-theme');
+  const t = e.target.closest('[data-group],[data-scroll],[data-go],[data-person],[data-act],[data-thread],[data-msg-filter],[data-cycle-filter],[data-sort],[data-cal],[data-message],[data-nav],#btn-menu,#btn-chat,#btn-notes,#panel-close,#panel-back,#scrim,#announce-prev,#announce-next,#announce-close,#btn-theme,#promo-close,[data-range]');
   if (!t) return;
   if (t.dataset.group) {
     const g = NAV.find((x) => x.id === t.dataset.group);
@@ -926,6 +1004,8 @@ document.addEventListener('click', (e) => {
   if (t.id === 'announce-next') { state.announceIdx = (state.announceIdx + 1) % ANNOUNCEMENTS.length; render(); return; }
   if (t.id === 'announce-close') { state.announceHidden = true; render(); return; }
   if (t.id === 'btn-theme') { toggleTheme(); return; }
+  if (t.id === 'promo-close') { $('#promo').hidden = true; return; }
+  if (t.dataset.range) { state.trendRange = t.dataset.range; render(); return; }
 });
 
 document.addEventListener('input', (e) => {
