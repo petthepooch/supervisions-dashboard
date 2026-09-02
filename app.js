@@ -601,12 +601,12 @@ function calendarEvents(s) {
   const ev = [];
   s.people.forEach((p) => {
     p.history.forEach((h) => {
-      if (h.signedOff) ev.push({ date: d(h.signedOff), tone: 'good', text: `${p.name.split(' ')[0]} signed off`, id: p.id });
-      else if (h.submitted) ev.push({ date: d(h.submitted), tone: 'info', text: `${p.name.split(' ')[0]} submitted`, id: p.id });
-      else if (h.booked) ev.push({ date: d(h.booked), tone: d(h.booked) < TODAY ? 'crit' : 'accent', text: `${p.name.split(' ')[0]} ${d(h.booked) < TODAY ? 'missed' : 'booked'}`, id: p.id });
+      if (h.signedOff) ev.push({ date: d(h.signedOff), tone: 'good', text: `${p.name.split(' ')[0]} signed off`, what: `${h.type} signed off`, id: p.id });
+      else if (h.submitted) ev.push({ date: d(h.submitted), tone: 'info', text: `${p.name.split(' ')[0]} submitted`, what: `${h.type} submitted, awaiting sign off`, id: p.id });
+      else if (h.booked) ev.push({ date: d(h.booked), tone: d(h.booked) < TODAY ? 'crit' : 'accent', text: `${p.name.split(' ')[0]} ${d(h.booked) < TODAY ? 'missed' : 'booked'}`, what: `${h.type} ${d(h.booked) < TODAY ? 'booked but not held' : 'booked'}`, id: p.id });
     });
-    if (!p.paused && p.status !== 'complete' && p.status !== 'booked') ev.push({ date: p.due, tone: p.due < TODAY ? 'crit' : 'warn', text: `${p.name.split(' ')[0]} due`, id: p.id });
-    if (p.paused && p.paused.decisionDue) ev.push({ date: d(p.paused.decisionDue), tone: 'warn', text: `${p.name.split(' ')[0]} decision`, id: p.id });
+    if (!p.paused && p.status !== 'complete' && p.status !== 'booked') ev.push({ date: p.due, tone: p.due < TODAY ? 'crit' : 'warn', text: `${p.name.split(' ')[0]} due`, what: `${p.type} ${p.due < TODAY ? 'was due' : 'due'}`, id: p.id });
+    if (p.paused && p.paused.decisionDue) ev.push({ date: d(p.paused.decisionDue), tone: 'warn', text: `${p.name.split(' ')[0]} decision`, what: `Return-to-work decision due`, id: p.id });
   });
   return ev;
 }
@@ -623,17 +623,23 @@ function calendarCard(s) {
     const dt = new Date(m.getFullYear(), m.getMonth(), day);
     const todays = events.filter((e) => e.date.getDate() === day);
     const isToday = iso(dt) === iso(TODAY);
-    cells.push(`<button class="cal-day ${isToday ? 'today' : ''} ${dt < TODAY ? 'past' : ''}" ${todays.length === 1 ? `data-person="${todays[0].id}"` : ''} aria-label="${fmt(dt, { day: 'numeric', month: 'long' })}${todays.length ? ', ' + todays.map((e) => e.text).join(', ') : ''}">
-      <span class="n">${day}</span>${todays.slice(0, 3).map((e) => `<span class="cal-ev"><i class="${e.tone}"></i><span>${esc(e.text)}</span></span>`).join('')}${todays.length > 3 ? `<span class="cal-ev"><span>+${todays.length - 3} more</span></span>` : ''}
+    const weekend = dt.getDay() === 0 || dt.getDay() === 6;
+    cells.push(`<button class="cal-day ${isToday ? 'today' : ''} ${dt < TODAY ? 'past' : ''} ${weekend ? 'weekend' : ''}" ${todays.length === 1 ? `data-person="${todays[0].id}"` : ''} aria-label="${fmt(dt, { weekday: 'long', day: 'numeric', month: 'long' })}${todays.length ? ', ' + todays.map((e) => e.text).join(', ') : ''}">
+      <span class="n">${day}</span>
+      ${todays.slice(0, 3).map((e) => `<span class="cal-ev ${e.tone}" data-tip="${esc(`${byId(e.id).name}|${e.what}|${fmt(dt, { weekday: 'long', day: 'numeric', month: 'long' })}`)}">${esc(e.text)}</span>`).join('')}
+      ${todays.length > 3 ? `<span class="cal-more">+${todays.length - 3} more</span>` : ''}
     </button>`);
   }
+  // Pad the tail so the grid always ends on a Sunday.
+  while (cells.length % 7 !== 0) cells.push('<div class="cal-day pad"></div>');
   const isCurrent = m.getMonth() === TODAY.getMonth() && m.getFullYear() === TODAY.getFullYear();
-  return `<div class="card">
-    <div class="cal-head"><h3>${m.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</h3>
-      <div class="nav-btns">${isCurrent ? '' : '<button class="btn xs ghost" data-cal="today">Today</button>'}<button class="icon-btn" data-cal="-1" aria-label="Previous month">${ico('left')}</button><button class="icon-btn" data-cal="1" aria-label="Next month">${ico('right')}</button></div></div>
+  return `<div class="card cal">
+    <div class="cal-head">
+      <div class="cal-title"><h3>${m.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</h3><span class="sub">${plural(events.length, 'supervision event')} this month</span></div>
+      <div class="nav-btns"><button class="btn xs secondary" data-cal="today" ${isCurrent ? 'disabled' : ''}>Today</button><button class="icon-btn" data-cal="-1" aria-label="Previous month">${ico('left')}</button><button class="icon-btn" data-cal="1" aria-label="Next month">${ico('right')}</button></div>
+    </div>
     <div class="cal-grid">${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((x) => `<div class="cal-dow">${x}</div>`).join('')}${cells.join('')}</div>
-    <div class="legend" style="border-top:0;padding-top:4px"><span><i class="good"></i>Signed off</span><span><i class="info"></i>Submitted</span><span><i class="accent"></i>Booked</span><span><i class="warn"></i>Due or decision</span><span><i class="crit"></i>Overdue or missed</span></div>
-    <div class="cal-foot">${plural(events.length, 'supervision event')} this month. Click a day to open the person.</div>
+    <div class="legend"><span><i class="good"></i>Signed off</span><span><i class="info"></i>Submitted</span><span><i class="accent"></i>Booked</span><span><i class="warn"></i>Due or decision</span><span><i class="crit"></i>Overdue or missed</span></div>
   </div>`;
 }
 
