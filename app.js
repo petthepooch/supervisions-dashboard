@@ -526,7 +526,7 @@ function leagueCard(s) {
     <div class="table-wrap"><table class="tbl">
       <thead><tr>${th('rank', 'Rank')}${th('name', 'Manager')}${th('site', 'Site')}${th('team', 'Team', 'r')}${th('compliance', 'Team compliance')}${th('onTime', 'On time')}</tr></thead>
       <tbody>${rows.map((r) => `<tr class="${r.live ? 'is-me' : ''}">
-        <td class="rank num ${r.live ? 'me' : ''}">${r.rank}</td>
+        <td class="rank num ${r.live ? 'you' : ''}">${r.rank}</td>
         <td><strong>${esc(r.name)}</strong>${r.live ? ' <span class="pill accent plain" style="margin-left:6px">You</span>' : ''}</td>
         <td>${esc(r.site)}</td>
         <td class="r num">${r.team}</td>
