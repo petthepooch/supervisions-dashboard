@@ -306,11 +306,12 @@ function focusCards(s) {
   const kindIcon = { Chase: 'mail', 'Sign off': 'check', Decision: 'calendar', Safeguarding: 'shield', Report: 'download' };
   return `<div class="focus">${cards.slice(0, 4).map((c) => `
     <button class="focus-card ${c.tone}" ${c.action}>
-      <div class="top"><span class="tile tone">${ico(kindIcon[c.kind] || 'tasks')}</span>${c.pill}</div>
-      <span class="kind">${c.kind}</span>
-      <div class="title">${esc(c.title)}</div>
-      <div class="why">${esc(c.why)}</div>
-      <div class="foot"><span class="cta">${c.cta}${ico('arrow')}</span></div>
+      <span class="tile tone">${ico(kindIcon[c.kind] || 'tasks')}</span>
+      <div class="body">
+        <div class="row"><span class="title">${esc(c.title)}</span>${c.pill}</div>
+        <div class="why">${esc(c.why)}</div>
+        <div class="foot"><span class="cta">${c.cta}${ico('arrow')}</span></div>
+      </div>
     </button>`).join('')}</div>`;
 }
 
@@ -327,45 +328,27 @@ function flatline() {
   return `<svg viewBox="0 0 220 30" preserveAspectRatio="none" aria-hidden="true"><line class="dash" x1="4" y1="15" x2="216" y2="15"/></svg>`;
 }
 
+function statCell({ cls = '', label, value, small = '', desc = '', foot = '', attr = '' }) {
+  return `<button class="stat ${cls}" ${attr}>
+    <span class="k">${label} ${ico('chevR')}</span>
+    <span class="v num">${value}${small ? `<small>${small}</small>` : ''}</span>
+    <span class="d">${desc || '&nbsp;'}</span>
+    <div class="foot">${foot}</div>
+  </button>`;
+}
+
 function statsRow(s) {
   const a = s.active.length;
   const trend = [...TREND.slice(-11).map((t) => t.v), s.compliance];
-  const label = (t, scroll) => `<span class="k">${t} ${ico('chevR')}</span>`;
+  const meter = (segs) => `<div class="meter thin">${segs.map(([w, c]) => `<i class="${c}" style="width:${w * 100}%"></i>`).join('')}</div>`;
+  const overdueDays = s.overdue.length ? daysBetween(s.overdue[0].due, TODAY) : 0;
   return `<div class="stats">
-    <button class="stat" data-scroll="trend">
-      ${label('Team compliance')}
-      <span class="v num">${pct(s.compliance)}<small>${s.compliantCount} of ${a} in date</small></span>
-      <div class="spark">${sparkline(trend)}</div>
-    </button>
-    <button class="stat" data-scroll="cycle">
-      ${label('Signed off this quarter')}
-      <span class="v num">${s.signedOff}<small>of ${a}</small></span>
-      <span class="d">${s.booked} booked · ${s.drafting} drafting · ${s.notBooked} not booked</span>
-      <div class="spark"><div class="meter thin" style="margin-top:0"><i style="width:${(s.signedOff / a) * 100}%"></i><i class="accent" style="width:${(s.booked / a) * 100}%"></i><i class="muted" style="width:${(s.drafting / a) * 100}%"></i></div></div>
-    </button>
-    <button class="stat" data-scroll="attention">
-      ${label('Awaiting your sign off')}
-      <span class="v num">${s.review.length}<small>${s.review.length ? s.review.map((p) => p.name.split(' ')[0]).join(', ') : 'nothing waiting'}</small></span>
-      <span class="d">${s.review.length ? 'Counts towards compliance once signed.' : 'You are up to date.'}</span>
-      <div class="spark">${s.review.length ? '' : flatline()}</div>
-    </button>
-    <button class="stat ${s.overdue.length ? 'hl' : ''}" data-scroll="attention">
-      ${label('Overdue')}
-      <span class="v num">${s.overdue.length}${s.overdue.length ? ico('warnTri').replace('<svg ', '<svg class="warn-ico" ') : ''}<small>${s.overdue.length ? s.overdue.map((p) => p.name).join(', ') : 'nobody'}</small></span>
-      ${s.overdue.length ? `<div class="cta"><span class="btn sm warn">${ico('mail')} Chase now</span></div>` : `<span class="d">${s.atRisk.length ? `${plural(s.atRisk.length, 'person', 'people')} due within ${POLICY.atRiskDays} days` : `Nobody due within ${POLICY.atRiskDays} days`}</span><div class="spark">${flatline()}</div>`}
-    </button>
-    <button class="stat" data-scroll="attention">
-      ${label('Open actions')}
-      <span class="v num">${s.openActions}<small>need you</small></span>
-      <span class="d">${plural(s.overdue.length, 'overdue')} · ${s.review.length} to sign off · ${plural(s.openFlags.length, 'flag')} · ${plural(s.decisions.length, 'decision')}</span>
-      <div class="spark">${sparkline([2, 3, 3, 4, 2, 1, 2, 3, 5, 4, 3, s.openActions], s.openActions ? '' : 'good')}</div>
-    </button>
-    <button class="stat" data-go="/development/pdps">
-      ${label('PDP progress')}
-      <span class="v num">${pct(pdpProgress(s))}<small>objectives complete</small></span>
-      <span class="d">${s.people.filter((p) => d(p.pdp.review) <= addDays(TODAY, 30)).length} reviews due in the next 30 days</span>
-      <div class="spark"><div class="meter thin" style="margin-top:0"><i style="width:${pdpProgress(s) * 100}%"></i></div></div>
-    </button>
+    ${statCell({ label: 'Team compliance', value: pct(s.compliance), small: `${s.compliantCount} of ${a} in date`, desc: `${s.signedOff} signed off, ${s.compliantCount - s.signedOff} in date and booked or drafting`, foot: sparkline(trend), attr: 'data-scroll="trend"' })}
+    ${statCell({ label: 'Signed off this quarter', value: s.signedOff, small: `of ${a}`, desc: `${s.booked} booked · ${s.drafting} drafting · ${s.notBooked} not booked`, foot: meter([[s.signedOff / a, ''], [s.booked / a, 'accent'], [s.drafting / a, 'muted']]), attr: 'data-scroll="cycle"' })}
+    ${statCell({ label: 'Awaiting your sign off', value: s.review.length, small: s.review.length ? s.review.map((p) => p.name.split(' ')[0]).join(', ') : 'nothing waiting', desc: s.review.length ? 'Counts towards compliance once you sign it.' : 'You are up to date.', foot: meter([[s.review.length / a, 'info']]), attr: 'data-scroll="attention"' })}
+    ${statCell({ cls: s.overdue.length ? 'hl' : '', label: 'Overdue', value: `${s.overdue.length}${s.overdue.length ? ico('warnTri').replace('<svg ', '<svg class="warn-ico" ') : ''}`, small: s.overdue.length ? s.overdue.map((p) => p.name).join(', ') : 'nobody', desc: s.overdue.length ? `${plural(overdueDays, 'day')} overdue, ${plural(s.overdue[0].chases.length, 'chase')} sent` : (s.atRisk.length ? `${plural(s.atRisk.length, 'person', 'people')} due within ${POLICY.atRiskDays} days` : `Nobody due within ${POLICY.atRiskDays} days`), foot: s.overdue.length ? `<span class="btn xs warn">${ico('mail')} Chase now</span>` : meter([[0, '']]), attr: 'data-scroll="attention"' })}
+    ${statCell({ label: 'Open actions', value: s.openActions, small: 'need you', desc: `${plural(s.overdue.length, 'overdue')} · ${s.review.length} to sign off · ${plural(s.openFlags.length, 'flag')} · ${plural(s.decisions.length, 'decision')}`, foot: sparkline([2, 3, 3, 4, 2, 1, 2, 3, 5, 4, 3, s.openActions], s.openActions ? '' : 'good'), attr: 'data-scroll="attention"' })}
+    ${statCell({ label: 'PDP progress', value: pct(pdpProgress(s)), small: 'objectives complete', desc: `${s.people.filter((p) => d(p.pdp.review) <= addDays(TODAY, 30)).length} reviews due in the next 30 days`, foot: meter([[pdpProgress(s), '']]), attr: 'data-go="/development/pdps"' })}
   </div>`;
 }
 const pdpProgress = (s) => { const t = s.people.reduce((n, p) => n + p.pdp.objectives, 0); const c = s.people.reduce((n, p) => n + p.pdp.complete, 0); return t ? c / t : 0; };
@@ -452,7 +435,7 @@ function safeguardingBanner(s) {
   return `<div class="alert ${f.severity === 'high' ? 'crit' : ''}">
     <div class="ico">${ico('shield')}</div>
     <div class="txt"><strong>Safeguarding: ${esc(f.title)}</strong><span>Raised ${fmt(d(f.raised))} from ${esc(p.name)}'s supervision. ${plural(s.openFlags.length, 'open flag')}. Triage decision outstanding.</span></div>
-    <button class="btn sm secondary" data-go="/safeguarding/triage">Open triage ${ico('arrow')}</button>
+    <button class="btn sm critical" data-go="/safeguarding/triage">Open triage ${ico('arrow')}</button>
   </div>`;
 }
 
