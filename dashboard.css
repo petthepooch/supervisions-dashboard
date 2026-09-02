@@ -524,15 +524,17 @@ svg.i { width: 18px; height: 18px; flex: none; }
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-l);
   transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
+.focus-card .why { min-height: 0; }
 .focus-card:hover { border-color: var(--line-strong); box-shadow: 0 2px 10px rgba(15, 15, 17, 0.05); }
-.focus-card .head { display: flex; align-items: center; gap: 12px; }
-.focus-card .title { font-size: 15.5px; font-weight: 500; line-height: 1.3; color: var(--ink); min-width: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.focus-card .title { font-size: 16px; font-weight: 500; line-height: 1.3; color: var(--ink); min-width: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .focus-card .why { color: var(--ink-2); font-size: 13.5px; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 39px; }
 .focus-card .foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); }
 .focus-card .foot .cta { font-weight: 500; font-size: 13.5px; color: var(--ink); display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .focus-card .foot .cta svg { width: 14px; height: 14px; transition: transform var(--dur) var(--ease); }
 .focus-card:hover .foot .cta svg { transform: translateX(3px); }
 .focus-card .pill { font-size: 12px; height: 22px; flex: none; }
+.pill.has-ico::before { display: none; }
+.pill.has-ico svg { width: 13px; height: 13px; flex: none; }
 .tile.tone { width: 36px; height: 36px; border: 0; border-radius: 10px; flex: none; }
 .tile.tone svg { width: 18px; height: 18px; }
 .focus-card.t-crit .tile.tone { background: var(--crit-soft); color: var(--crit); }
