@@ -461,21 +461,23 @@ svg.i { width: 18px; height: 18px; flex: none; }
 
 /* Stats strip: three tinted cards, one object. Colour is reserved for
    overdue; the quarter bar is a single-hue sequential ramp. */
-.strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
+.strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: stretch; }
 .scard {
   display: flex; flex-direction: column;
-  padding: 20px;
+  padding: 18px 18px 16px;
   border-radius: var(--radius-l);
-  background: var(--surface-2);
+  background: var(--surface); border: 1px solid var(--line);
   min-width: 0;
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
+.scard:hover { border-color: var(--line-strong); box-shadow: 0 2px 10px rgba(15, 15, 17, 0.05); }
 .slabel { height: 20px; font-size: 13px; color: color-mix(in srgb, var(--ink) 60%, transparent); }
 .shead { display: flex; align-items: baseline; gap: 8px; margin: 6px 0 14px; }
 .snum { font-size: 36px; line-height: 1; letter-spacing: -0.02em; color: var(--ink); font-variant-numeric: tabular-nums lining-nums; }
 .sunit { font-size: 13px; color: color-mix(in srgb, var(--ink) 60%, transparent); }
 .ssub { font-size: 13px; color: color-mix(in srgb, var(--ink) 60%, transparent); margin-bottom: 14px; }
 .sfoot { margin-top: auto; }
-.sbar { position: relative; height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--ink) 10%, transparent); }
+.sbar { position: relative; height: 6px; border-radius: 3px; background: var(--surface-3); }
 .sbar .fill { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: var(--ink); }
 .sbar .mark { position: absolute; top: -4px; bottom: -4px; width: 1px; background: color-mix(in srgb, var(--ink) 40%, transparent); }
 .sbar.stack { display: flex; gap: 2px; background: transparent; margin-bottom: 14px; }
@@ -498,11 +500,11 @@ svg.i { width: 18px; height: 18px; flex: none; }
 .srow {
   display: flex; align-items: center; gap: 10px;
   min-height: 44px; padding: 8px 0;
-  border-top: 1px solid color-mix(in srgb, var(--ink) 10%, transparent);
+  border-top: 1px solid var(--line);
   text-align: left; width: 100%;
   transition: background var(--dur) var(--ease);
 }
-.srow:hover { background: color-mix(in srgb, var(--ink) 3%, transparent); }
+.srow:hover { background: var(--surface-2); }
 .srow > svg { width: 16px; height: 16px; flex: none; color: color-mix(in srgb, var(--ink) 40%, transparent); }
 .sav {
   --h: 200;
