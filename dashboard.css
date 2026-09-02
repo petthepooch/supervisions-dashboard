@@ -508,7 +508,9 @@ svg.i { width: 18px; height: 18px; flex: none; }
 .sbar .muted { background: var(--line-strong); }
 .sbar .danger { background: var(--crit); }
 .scap { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: color-mix(in srgb, var(--ink) 55%, transparent); }
-.segcap { display: flex; flex-wrap: wrap; gap: 4px 6px; }
+.segcap { display: flex; flex-wrap: nowrap; gap: 6px; min-width: 0; overflow: hidden; }
+.segcap > span { white-space: nowrap; }
+.scap:has(.segcap) { display: block; }
 .segcap b { color: var(--ink); font-weight: 500; }
 .segcap .good b { color: var(--good); } .segcap .accent b { color: var(--accent-ink); } .segcap .warn b { color: var(--warn); } .segcap .info b { color: var(--info); }
 .segcap .danger, .segcap .danger b { color: var(--crit); }
@@ -689,7 +691,7 @@ svg.i { width: 18px; height: 18px; flex: none; }
 .tbl th.sortable button:hover { color: var(--ink); }
 .tbl th.sorted button { color: var(--ink); }
 .tbl th svg { width: 12px; height: 12px; }
-.tbl td { padding: 13px 20px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.tbl td { padding: 13px 20px; border-bottom: 1px solid var(--line); vertical-align: middle; font-size: 14px; }
 .tbl tr:last-child td { border-bottom: 0; }
 .tbl tbody tr:hover td { background: var(--surface-2); }
 .tbl .person { display: flex; align-items: center; gap: 10px; }
@@ -709,7 +711,8 @@ svg.i { width: 18px; height: 18px; flex: none; }
 .legend i.good { background: var(--good); } .legend i.warn { background: var(--warn); } .legend i.crit { background: var(--crit); }
 .legend i.info { background: var(--info); } .legend i.accent { background: var(--accent); } .legend i.muted { background: var(--line-strong); }
 
-.rank { font-size: 16px; font-weight: 500; color: var(--ink-3); width: 44px; }
+.rank { font-size: 13.5px; font-weight: 500; color: var(--ink-3); width: 44px; }
+.mgr { font-weight: 500; }
 .rank.you { color: var(--ink); }
 tr.is-me td { background: var(--accent-soft); }
 .bar-cell { display: flex; align-items: center; gap: 10px; min-width: 160px; }
