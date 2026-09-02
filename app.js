@@ -358,7 +358,7 @@ function peopleSummary(list, emptyText = 'Nobody') {
 }
 
 function statCell({ cls = '', label, value, facts = [], people = null, foot = '', attr = '' }) {
-  const right = people ? people : `<dl class="facts">${facts.map(([k, v, tone]) => `<dt>${k}</dt><dd class="num ${tone || ''}">${v}</dd>`).join('')}</dl>`;
+  const right = people ? people : `<dl class="facts">${facts.map(([k, v, tone, dot]) => `<dt>${dot ? `<i class="dot ${dot}"></i>` : ''}${k}</dt><dd class="num ${tone || ''}">${v}</dd>`).join('')}</dl>`;
   return `<button class="stat ${cls}" ${attr}>
     <div class="head"><span class="k">${label} ${ico('chevR')}</span><span class="v num">${value}</span></div>
     <div class="side">${right}</div>
@@ -366,33 +366,47 @@ function statCell({ cls = '', label, value, facts = [], people = null, foot = ''
   </button>`;
 }
 
+/* Footer visuals. Each says something the figure does not. */
+const meter = (segs, target) => `<div class="meter thin ${target != null ? 'has-target' : ''}" ${target != null ? `style="--t:${target * 100}%"` : ''}>${segs.map(([w, c]) => `<i class="${c}" style="width:${Math.max(0, Math.min(1, w)) * 100}%"></i>`).join('')}</div>`;
+const cap = (l, r = '') => `<div class="cap"><span>${l}</span><span>${r}</span></div>`;
+/* One dot per person, coloured by where their quarter is. */
+function personDots(people) {
+  const tone = { complete: '', review: 'info', booked: 'accent', drafting: 'warn', not_booked: 'muted', overdue: 'crit', paused: 'hollow' };
+  const order = ['complete', 'review', 'booked', 'drafting', 'not_booked', 'overdue', 'paused'];
+  const sorted = [...people].sort((x, y) => order.indexOf(x.status) - order.indexOf(y.status));
+  return `<div class="dots">${sorted.map((p) => `<i class="${tone[p.status] || ''}" title="${esc(p.name)}: ${esc(p.label)}"></i>`).join('')}</div>`;
+}
+
 function statsRow(s) {
   const a = s.active.length;
-  const meter = (segs, target) => `<div class="meter thin ${target != null ? 'has-target' : ''}" ${target != null ? `style="--t:${target * 100}%"` : ''}>${segs.map(([w, c]) => `<i class="${c}" style="width:${Math.max(0, w) * 100}%"></i>`).join('')}</div>`;
   const nonCompliant = a - s.compliantCount;
   const oa = Math.max(1, s.openActions);
   const pdpTotal = s.people.reduce((n, p) => n + p.pdp.objectives, 0), pdpDone = s.people.reduce((n, p) => n + p.pdp.complete, 0);
   const pdpDue = s.people.filter((p) => d(p.pdp.review) <= addDays(TODAY, 30)).length;
   const overdueDays = s.overdue.length ? daysBetween(s.overdue[0].due, TODAY) : 0;
+  const SIGNOFF_SLA = 5; // working days to sign off a submitted record
+  const waiting = s.review.length ? Math.max(...s.review.map((p) => daysBetween(d(p.current.submitted), TODAY))) : 0;
   return `<div class="stats">
     ${statCell({ label: 'Team compliance', value: pct(s.compliance),
       facts: [['In date', `${s.compliantCount} of ${a}`], ['Gap to 100%', s.gap ? pct(1 - s.compliance) : 'None', s.gap ? 'warn' : 'good'], ['Target', '90%']],
-      foot: meter([[s.signedOff / a, ''], [(s.compliantCount - s.signedOff) / a, 'accent'], [nonCompliant / a, 'crit']], 0.9), attr: 'data-scroll="trend"' })}
+      foot: meter([[s.compliance, s.compliance >= 0.9 ? 'good' : '']], 0.9) + cap(`${pct(s.compliance)} compliant`, `Target 90%`), attr: 'data-scroll="trend"' })}
     ${statCell({ label: 'Signed off this quarter', value: `${s.signedOff}<small>of ${a}</small>`,
       facts: [['Booked', s.booked], ['Drafting', s.drafting], ['Not booked', s.notBooked, s.notBooked ? 'warn' : '']],
-      foot: meter([[s.signedOff / a, ''], [s.booked / a, 'accent'], [s.drafting / a, 'muted']]), attr: 'data-scroll="cycle"' })}
+      foot: personDots(s.active) + `<div class="cap legend-cap"><span><i class="dot"></i>Signed</span><span><i class="dot info"></i>To sign off</span><span><i class="dot accent"></i>Booked</span><span><i class="dot warn"></i>Drafting</span><span><i class="dot muted"></i>Not booked</span><span><i class="dot crit"></i>Overdue</span></div>`, attr: 'data-scroll="cycle"' })}
     ${statCell({ label: 'Awaiting your sign off', value: s.review.length,
-      people: peopleSummary(s.review, 'Nothing waiting on you') + (s.review.length ? `<dl class="facts"><dt>Waiting longest</dt><dd class="num ${Math.max(...s.review.map((p) => daysBetween(d(p.current.submitted), TODAY))) > 5 ? 'warn' : ''}">${plural(Math.max(...s.review.map((p) => daysBetween(d(p.current.submitted), TODAY))), 'day')}</dd><dt>Counts once signed</dt><dd class="num">+${Math.round((s.review.length / s.active.length) * 100)}%</dd></dl>` : `<dl class="facts"><dt>Signed this quarter</dt><dd class="num">${s.signedOff}</dd></dl>`),
-      foot: meter([[s.review.length / a, 'info']]), attr: 'data-scroll="attention"' })}
-    ${statCell({ cls: s.overdue.length ? 'hl' : '', label: 'Overdue', value: `${s.overdue.length}${s.overdue.length ? ico('warnTri').replace('<svg ', '<svg class="warn-ico" ') : ''}`,
+      people: peopleSummary(s.review, 'Nothing waiting on you') + (s.review.length ? `<dl class="facts"><dt>Waiting longest</dt><dd class="num ${waiting > SIGNOFF_SLA ? 'crit' : ''}">${plural(waiting, 'day')}</dd><dt>Adds to compliance</dt><dd class="num good">+${Math.round((s.review.length / a) * 100)}%</dd></dl>` : `<dl class="facts"><dt>Signed this quarter</dt><dd class="num">${s.signedOff}</dd></dl>`),
+      foot: s.review.length
+        ? meter([[waiting / (SIGNOFF_SLA * 2), waiting > SIGNOFF_SLA ? 'crit' : 'info']], 0.5) + cap(`Waiting ${plural(waiting, 'day')}`, `Sign off within ${SIGNOFF_SLA} days`)
+        : meter([[0, '']]) + cap('Nothing waiting', ''), attr: 'data-scroll="attention"' })}
+    ${statCell({ label: 'Overdue', value: `${s.overdue.length}${s.overdue.length ? ico('warnTri').replace('<svg ', '<svg class="warn-ico" ') : ''}`,
       people: s.overdue.length ? peopleSummary(s.overdue) + `<dl class="facts"><dt>Longest</dt><dd class="num crit">${plural(overdueDays, 'day')}</dd><dt>Chases sent</dt><dd class="num">${s.overdue.reduce((n, p) => n + p.chases.length, 0)}</dd></dl>` : `<dl class="facts"><dt>Due in 14 days</dt><dd class="num">${s.atRisk.length}</dd><dt>Overdue</dt><dd class="num good">None</dd></dl>`,
-      foot: s.overdue.length ? `<span class="btn xs warn">${ico('mail')} Chase now</span>` : meter([[0, '']]), attr: 'data-scroll="attention"' })}
+      foot: s.overdue.length ? `<span class="btn xs critical">${ico('mail')} Chase now</span>` : meter([[0, '']]) + cap('Nobody overdue', ''), attr: 'data-scroll="attention"' })}
     ${statCell({ label: 'Open actions', value: s.openActions,
-      facts: [['Overdue', s.overdue.length, s.overdue.length ? 'crit' : ''], ['To sign off', s.review.length, s.review.length ? 'info' : ''], ['Flags', s.openFlags.length, s.openFlags.length ? 'crit' : ''], ['Decisions', s.decisions.length, s.decisions.length ? 'warn' : '']],
-      foot: meter([[s.overdue.length / oa, 'crit'], [s.review.length / oa, 'info'], [s.openFlags.length / oa, ''], [s.decisions.length / oa, 'warn']]), attr: 'data-scroll="attention"' })}
+      facts: [['Overdue', s.overdue.length, s.overdue.length ? 'crit' : '', 'crit'], ['To sign off', s.review.length, s.review.length ? 'info' : '', 'info'], ['Flags', s.openFlags.length, s.openFlags.length ? 'crit' : '', 'ink'], ['Decisions', s.decisions.length, s.decisions.length ? 'warn' : '', 'warn']],
+      foot: meter([[s.overdue.length / oa, 'crit'], [s.review.length / oa, 'info'], [s.openFlags.length / oa, ''], [s.decisions.length / oa, 'warn']]) + cap(`${s.overdue.length + s.review.length} block compliance`, `${s.openFlags.length + s.decisions.length} need a decision`), attr: 'data-scroll="attention"' })}
     ${statCell({ label: 'PDP progress', value: pct(pdpProgress(s)),
       facts: [['Objectives done', `${pdpDone} of ${pdpTotal}`], ['Reviews due', `${pdpDue} in 30 days`, pdpDue ? 'warn' : '']],
-      foot: meter([[pdpProgress(s), '']]), attr: 'data-go="/development/pdps"' })}
+      foot: meter([[pdpProgress(s), '']]) + cap(`${pdpDone} done`, `${pdpTotal - pdpDone} to go`), attr: 'data-go="/development/pdps"' })}
   </div>`;
 }
 const pdpProgress = (s) => { const t = s.people.reduce((n, p) => n + p.pdp.objectives, 0); const c = s.people.reduce((n, p) => n + p.pdp.complete, 0); return t ? c / t : 0; };
