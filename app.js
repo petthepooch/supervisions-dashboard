@@ -93,7 +93,7 @@ function derivePerson(p) {
   } else if (due < TODAY) {
     status = 'overdue'; tone = 'crit'; label = `${plural(daysBetween(due, TODAY), 'day')} overdue`;
   } else if (current && current.booked && !current.signedOff) {
-    status = 'booked'; tone = 'info'; label = `Booked ${fmt(d(current.booked))}`;
+    status = 'booked'; tone = 'accent'; label = `Booked ${fmt(d(current.booked))}`;
   } else if (current && current.draft) {
     status = 'drafting'; tone = 'warn'; label = `Drafting, due ${fmt(due)}`;
   } else {
@@ -289,7 +289,7 @@ function sectionTabs(tabs) {
 
 function pageHead(title, lede, actions = '', date = true) {
   return `<header class="page-head">
-    <div><h1>${title}</h1>${lede ? `<p class="lede">${lede}</p>` : ''}${date ? `<p class="date">${fmtLong(TODAY)}</p>` : ''}</div>
+    <div>${date ? `<p class="eyebrow">${fmtLong(TODAY)}</p>` : ''}<h1>${title}</h1>${lede ? `<p class="lede">${lede}</p>` : ''}</div>
     ${actions ? `<div class="actions">${actions}</div>` : ''}
   </header>`;
 }
@@ -357,10 +357,11 @@ function statsRow(s) {
   const target = 0.9;
   const byStatus = (...st) => s.active.filter((p) => st.includes(p.status));
   const segs = [
-    { label: 'Signed off', people: byStatus('complete'), fill: 'ink' },
-    { label: 'In progress', people: byStatus('booked', 'drafting'), fill: 'ink-45' },
-    { label: 'Awaiting you', people: byStatus('review'), fill: 'ink-15' },
-    { label: 'Not booked', people: byStatus('not_booked'), fill: 'ink-8' },
+    { label: 'Signed off', people: byStatus('complete'), fill: 'good' },
+    { label: 'Booked', people: byStatus('booked'), fill: 'accent' },
+    { label: 'Drafting', people: byStatus('drafting'), fill: 'warn' },
+    { label: 'Awaiting you', people: byStatus('review'), fill: 'info' },
+    { label: 'Not booked', people: byStatus('not_booked'), fill: 'muted' },
     { label: 'Overdue', people: byStatus('overdue'), fill: 'danger', danger: true },
   ];
   const sum = segs.reduce((n, g) => n + g.people.length, 0);
@@ -387,11 +388,11 @@ function statsRow(s) {
        <div class="scap"><span>Now</span><span>Target ${Math.round(target * 100)}%</span></div>`, 'data-scroll="trend"')}
     ${card('This quarter', total, 'due', `${s.signedOff} signed off, ${total - s.signedOff} still to close`,
       `<div class="sbar stack" role="img" aria-label="${segs.filter((g) => g.people.length).map((g) => `${g.people.length} ${g.label.toLowerCase()}`).join(', ')}">${segs.filter((g) => g.people.length).map((g) => `<i class="${g.fill}" style="flex:${g.people.length}" data-tip="${esc(tip(g))}"></i>`).join('')}</div>
-       <div class="scap"><span class="segcap">${segs.filter((g) => g.people.length).map((g) => `<span class="${g.danger ? 'danger' : ''}"><b class="num">${g.people.length}</b> ${g.label.toLowerCase()}</span>`).join('<span class="sep">·</span>')}</span></div>`, 'data-scroll="cycle"')}
+       <div class="scap"><span class="segcap">${segs.filter((g) => g.people.length).map((g) => `<span class="${g.danger ? 'danger' : g.fill}"><b class="num">${g.people.length}</b> ${g.label.toLowerCase()}</span>`).join('<span class="sep">·</span>')}</span></div>`, 'data-scroll="cycle"')}
     ${card('Next 14 days', soon.length, 'due', soon.length ? `${soon.map((p) => p.name.split(' ')[0]).join(', ')} ${soon.length === 1 ? 'is' : 'are'} due before ${fmt(horizonEnd)}` : `Nothing falls due before ${fmt(horizonEnd)}`,
       `<div class="sbar timeline" role="img" aria-label="${soon.length ? soon.map((p) => `${p.name} due ${fmt(p.due)}`).join(', ') : 'Nothing due in the next 14 days'}">
          <i class="today"></i>
-         ${soon.map((p) => `<i class="due ${p.status === 'not_booked' ? 'danger' : ''}" style="left:${(p.daysToDue / HORIZON) * 100}%" data-tip="${esc(`${p.name}|${p.type} · ${p.status === 'booked' ? 'booked' : p.status === 'drafting' ? 'drafting' : 'not booked'}|Due ${fmt(p.due, { weekday: 'short', day: 'numeric', month: 'short' })} · in ${plural(p.daysToDue, 'day')}`)}"></i>`).join('')}
+         ${soon.map((p) => `<i class="due ${p.tone}" style="left:${(p.daysToDue / HORIZON) * 100}%" data-tip="${esc(`${p.name}|${p.type} · ${p.status === 'booked' ? 'booked' : p.status === 'drafting' ? 'drafting' : 'not booked'}|Due ${fmt(p.due, { weekday: 'short', day: 'numeric', month: 'short' })} · in ${plural(p.daysToDue, 'day')}`)}"></i>`).join('')}
        </div>
        <div class="scap"><span>Today</span><span>${HORIZON} days</span></div>`, 'data-scroll="calendar"')}
   </div>
@@ -554,7 +555,7 @@ function cycleCard(s, { compact = false } = {}) {
         ${compact ? '' : `<td class="num">${p.paused ? '<span style="color:var(--ink-3)">Paused</span>' : `${fmt(p.due, { day: 'numeric', month: 'short', year: 'numeric' })}${p.status !== 'complete' ? ` <span style="color:var(--ink-3)">(${p.daysToDue < 0 ? `${-p.daysToDue}d ago` : `in ${p.daysToDue}d`})</span>` : ''}`}</td>`}
       </tr>`).join('') || `<tr><td colspan="6" class="empty">No one matches that filter.</td></tr>`}</tbody>
     </table></div>
-    <div class="legend"><span><i class="good"></i>Signed off</span><span><i class="info"></i>Booked or awaiting sign off</span><span><i class="warn"></i>Drafting or not booked</span><span><i class="crit"></i>Overdue or missed</span><span><i class="muted"></i>Paused or future</span></div>
+    <div class="legend"><span><i class="good"></i>Signed off</span><span><i class="accent"></i>Booked</span><span><i class="info"></i>Awaiting sign off</span><span><i class="warn"></i>Drafting or not booked</span><span><i class="crit"></i>Overdue or missed</span><span><i class="muted"></i>Paused or future</span></div>
   </div>`;
 }
 
