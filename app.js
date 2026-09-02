@@ -306,12 +306,9 @@ function focusCards(s) {
   const kindIcon = { Chase: 'mail', 'Sign off': 'check', Decision: 'calendar', Safeguarding: 'shield', Report: 'download' };
   return `<div class="focus">${cards.slice(0, 4).map((c) => `
     <button class="focus-card ${c.tone}" ${c.action}>
-      <span class="tile tone">${ico(kindIcon[c.kind] || 'tasks')}</span>
-      <div class="body">
-        <div class="row"><span class="title">${esc(c.title)}</span>${c.pill}</div>
-        <div class="why">${esc(c.why)}</div>
-        <div class="foot"><span class="cta">${c.cta}${ico('arrow')}</span></div>
-      </div>
+      <div class="head"><span class="tile tone">${ico(kindIcon[c.kind] || 'tasks')}</span><span class="title">${esc(c.title)}</span></div>
+      <div class="why">${esc(c.why)}</div>
+      <div class="foot">${c.pill}<span class="cta">${c.cta}${ico('arrow')}</span></div>
     </button>`).join('')}</div>`;
 }
 
@@ -339,15 +336,16 @@ function statCell({ cls = '', label, value, small = '', desc = '', foot = '', at
 
 function statsRow(s) {
   const a = s.active.length;
-  const trend = [...TREND.slice(-11).map((t) => t.v), s.compliance];
-  const meter = (segs) => `<div class="meter thin">${segs.map(([w, c]) => `<i class="${c}" style="width:${w * 100}%"></i>`).join('')}</div>`;
+  const meter = (segs, target) => `<div class="meter thin ${target != null ? 'has-target' : ''}" ${target != null ? `style="--t:${target * 100}%"` : ''}>${segs.map(([w, c]) => `<i class="${c}" style="width:${Math.max(0, w) * 100}%"></i>`).join('')}</div>`;
+  const nonCompliant = a - s.compliantCount;
+  const oa = Math.max(1, s.openActions);
   const overdueDays = s.overdue.length ? daysBetween(s.overdue[0].due, TODAY) : 0;
   return `<div class="stats">
-    ${statCell({ label: 'Team compliance', value: pct(s.compliance), small: `${s.compliantCount} of ${a} in date`, desc: `${s.signedOff} signed off, ${s.compliantCount - s.signedOff} in date and booked or drafting`, foot: sparkline(trend), attr: 'data-scroll="trend"' })}
+    ${statCell({ label: 'Team compliance', value: pct(s.compliance), small: `${s.compliantCount} of ${a} in date`, desc: `${s.signedOff} signed off · ${s.compliantCount - s.signedOff} in date · ${nonCompliant} not compliant · target 90%`, foot: meter([[s.signedOff / a, ''], [(s.compliantCount - s.signedOff) / a, 'accent'], [nonCompliant / a, 'crit']], 0.9), attr: 'data-scroll="trend"' })}
     ${statCell({ label: 'Signed off this quarter', value: s.signedOff, small: `of ${a}`, desc: `${s.booked} booked · ${s.drafting} drafting · ${s.notBooked} not booked`, foot: meter([[s.signedOff / a, ''], [s.booked / a, 'accent'], [s.drafting / a, 'muted']]), attr: 'data-scroll="cycle"' })}
     ${statCell({ label: 'Awaiting your sign off', value: s.review.length, small: s.review.length ? s.review.map((p) => p.name.split(' ')[0]).join(', ') : 'nothing waiting', desc: s.review.length ? 'Counts towards compliance once you sign it.' : 'You are up to date.', foot: meter([[s.review.length / a, 'info']]), attr: 'data-scroll="attention"' })}
     ${statCell({ cls: s.overdue.length ? 'hl' : '', label: 'Overdue', value: `${s.overdue.length}${s.overdue.length ? ico('warnTri').replace('<svg ', '<svg class="warn-ico" ') : ''}`, small: s.overdue.length ? s.overdue.map((p) => p.name).join(', ') : 'nobody', desc: s.overdue.length ? `${plural(overdueDays, 'day')} overdue, ${plural(s.overdue[0].chases.length, 'chase')} sent` : (s.atRisk.length ? `${plural(s.atRisk.length, 'person', 'people')} due within ${POLICY.atRiskDays} days` : `Nobody due within ${POLICY.atRiskDays} days`), foot: s.overdue.length ? `<span class="btn xs warn">${ico('mail')} Chase now</span>` : meter([[0, '']]), attr: 'data-scroll="attention"' })}
-    ${statCell({ label: 'Open actions', value: s.openActions, small: 'need you', desc: `${plural(s.overdue.length, 'overdue')} · ${s.review.length} to sign off · ${plural(s.openFlags.length, 'flag')} · ${plural(s.decisions.length, 'decision')}`, foot: sparkline([2, 3, 3, 4, 2, 1, 2, 3, 5, 4, 3, s.openActions], s.openActions ? '' : 'good'), attr: 'data-scroll="attention"' })}
+    ${statCell({ label: 'Open actions', value: s.openActions, small: 'need you', desc: `${plural(s.overdue.length, 'overdue')} · ${s.review.length} to sign off · ${plural(s.openFlags.length, 'flag')} · ${plural(s.decisions.length, 'decision')}`, foot: meter([[s.overdue.length / oa, 'crit'], [s.review.length / oa, 'info'], [s.openFlags.length / oa, ''], [s.decisions.length / oa, 'warn']]), attr: 'data-scroll="attention"' })}
     ${statCell({ label: 'PDP progress', value: pct(pdpProgress(s)), small: 'objectives complete', desc: `${s.people.filter((p) => d(p.pdp.review) <= addDays(TODAY, 30)).length} reviews due in the next 30 days`, foot: meter([[pdpProgress(s), '']]), attr: 'data-go="/development/pdps"' })}
   </div>`;
 }
