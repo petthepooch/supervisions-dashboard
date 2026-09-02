@@ -105,6 +105,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 table { border-collapse: collapse; width: 100%; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 .num { font-variant-numeric: tabular-nums; }
+[hidden] { display: none !important; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 svg.i { width: 18px; height: 18px; flex: none; }
 
@@ -811,7 +812,43 @@ tr.is-me td { background: var(--accent-soft); }
 .panel-head h2 .pill { font-size: 12px; height: 21px; }
 .panel-body { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 20px; }
 
-.msg-filters { display: flex; gap: 4px; padding: 6px 16px 10px; }
+.msg-tools { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 18px 12px; flex-wrap: wrap; }
+.panel-seg button { padding: 5px 12px; display: inline-flex; align-items: center; gap: 6px; }
+.panel-seg .n { font-size: 11.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.msg-filters { display: flex; gap: 4px; }
+.mini-search.wide { width: 100%; margin: 0; }
+.av-wrap { position: relative; display: inline-block; flex: none; align-self: start; line-height: 0; }
+.notif .tile { align-self: start; }
+.presence { position: absolute; right: -1px; bottom: -1px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--bg); background: var(--line-strong); }
+.presence.online { background: var(--good); } .presence.away { background: var(--warn); } .presence.leave { background: var(--info); }
+.contact {
+  display: flex; align-items: center; gap: 12px; width: calc(100% - 24px); margin: 0 12px;
+  padding: 10px 12px; border-radius: 12px; text-align: left;
+  transition: background var(--dur) var(--ease);
+}
+.contact:hover { background: var(--surface-2); }
+.contact .who { flex: 1; min-width: 0; }
+.contact .who strong { display: block; font-weight: 500; font-size: 14.5px; }
+.contact .who span { display: block; font-size: 12.5px; color: var(--ink-3); }
+.contact svg { width: 14px; height: 14px; color: var(--ink-3); }
+.day-sep { display: flex; align-items: center; gap: 10px; margin: 6px 0; font-size: 11.5px; color: var(--ink-3); }
+.day-sep::before, .day-sep::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.group-label { padding: 10px 22px 4px; font-size: 12px; font-weight: 500; color: var(--ink-3); }
+.notif {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start;
+  width: calc(100% - 24px); margin: 0 12px; text-align: left;
+  padding: 12px 12px; border-radius: 12px;
+  transition: background var(--dur) var(--ease);
+}
+.notif:hover { background: var(--surface-2); }
+.notif.unread { background: var(--surface-2); }
+.notif.unread:hover { background: var(--surface-3); }
+.notif .when { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; color: var(--ink-3); }
+.notif strong { display: block; font-weight: 500; font-size: 14px; margin-top: 1px; }
+.notif .t { color: var(--ink-2); font-size: 13.5px; margin-top: 2px; }
+.notif .unread-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.tile.round.info { background: var(--info-soft); color: var(--info); }
+.tile.round.muted { background: var(--surface-3); color: var(--ink-2); }
 .msg {
   display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px;
   width: calc(100% - 24px); margin: 0 12px; text-align: left;

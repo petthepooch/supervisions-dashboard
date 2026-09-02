@@ -14,6 +14,21 @@ const addDays = (dt, n) => new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(
 const daysBetween = (a, b) => Math.round((b - a) / DAY);
 const fmt = (dt, opts = { day: 'numeric', month: 'short' }) => dt.toLocaleDateString('en-GB', opts);
 const fmtLong = (dt) => dt.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+const NOW = new Date(2026, 8, 2, 14, 10);
+const dtm = (s) => new Date(s.replace(' ', 'T'));
+function ago(s) {
+  const t = dtm(s); const mins = Math.round((NOW - t) / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24 && t.getDate() === NOW.getDate()) return `${hrs} hour${hrs === 1 ? '' : 's'} ago`;
+  const days = Math.round((new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate()) - new Date(t.getFullYear(), t.getMonth(), t.getDate())) / DAY);
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days} days ago`;
+  return t.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+const clock = (s) => dtm(s).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+const lastMsg = (c) => c.thread[c.thread.length - 1];
 const fmtShort = (dt) => dt.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
 const pct = (n) => `${Math.round(n * 100)}%`;
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -103,13 +118,14 @@ function derive() {
   const openFlags = SAFEGUARDING.filter((f) => f.status === 'open');
   const decisions = paused.filter((p) => p.paused.decisionDue && d(p.paused.decisionDue) >= addDays(TODAY, -30));
   const unread = MESSAGES.filter((m) => m.unread).length;
+  const unreadNotifs = NOTIFICATIONS.filter((n) => !n.read).length;
   const q = quarterOf(TODAY);
   return {
     people, active, paused, q,
     compliance: active.length ? compliant / active.length : 1,
     compliantCount: compliant,
     signedOff: count('complete'), booked: count('booked'), drafting: count('drafting'), notBooked: count('not_booked'),
-    overdue, review, atRisk, openFlags, decisions, unread,
+    overdue, review, atRisk, openFlags, decisions, unread, unreadNotifs,
     openActions: overdue.length + review.length + openFlags.length + decisions.length,
     gap: overdue.length + review.length,
   };
@@ -134,6 +150,8 @@ const state = {
   trendRange: '12m',
   openMenu: null,
   attnFilter: 'all',
+  msgTab: 'chats',
+  contactSearch: '',
 };
 
 /* Navigation model ----------------------------------------------- */
@@ -233,10 +251,13 @@ function renderNav(s) {
 }
 
 function renderTopbar(s) {
-  $('#btn-chat').classList.toggle('active', state.panelOpen && (state.panelMode === 'messages' || state.panelMode === 'thread'));
+  $('#btn-chat').classList.toggle('active', state.panelOpen && ['messages', 'thread', 'contacts'].includes(state.panelMode));
   $('#btn-notes').classList.toggle('active', state.panelOpen && state.panelMode === 'notes');
   $('#chat-dot').textContent = s.unread;
   $('#chat-dot').hidden = !s.unread;
+  $('#btn-bell').classList.toggle('active', state.panelOpen && state.panelMode === 'notifications');
+  $('#bell-dot').textContent = s.unreadNotifs;
+  $('#bell-dot').hidden = !s.unreadNotifs;
   const a = $('#announce');
   a.hidden = state.announceHidden;
   const item = ANNOUNCEMENTS[state.announceIdx];
@@ -868,19 +889,44 @@ function renderPanel(s) {
   back.hidden = !(state.panelMode === 'thread' || (state.panelMode === 'person' && state.panelReturn));
   if (state.panelMode === 'messages') {
     head.innerHTML = `Messages ${s.unread ? `<span class="pill accent plain">${s.unread} unread</span>` : ''}`;
-    let list = MESSAGES;
-    if (state.msgFilter === 'unread') list = list.filter((m) => m.unread);
-    body.innerHTML = `<div class="msg-filters"><button class="chip ${state.msgFilter === 'all' ? 'active' : ''}" data-msg-filter="all">All <span class="n">${MESSAGES.length}</span></button><button class="chip ${state.msgFilter === 'unread' ? 'active' : ''}" data-msg-filter="unread">Unread <span class="n">${s.unread}</span></button></div>
-      ${list.map((m) => { const p = byId(m.person); return `<button class="msg ${m.unread ? 'unread' : ''}" data-thread="${m.id}">${avatar(p)}<div><div class="when"><span>${m.when}</span>${m.unread ? '<span class="unread-dot"></span>' : ''}</div><div class="h"><strong>${esc(p.name)} ${m.unread ? ico('arrow') : ''}</strong></div><div class="role">${esc(p.role)}</div><div class="t">${esc(m.text)}</div></div></button>`; }).join('') || '<div class="empty">No unread messages.</div>'}`;
+    const tabs = `<div class="seg panel-seg"><button class="${state.msgTab === 'chats' ? 'active' : ''}" data-msg-tab="chats">Chats${s.unread ? `<span class="n">${s.unread}</span>` : ''}</button><button class="${state.msgTab === 'contacts' ? 'active' : ''}" data-msg-tab="contacts">Contacts<span class="n">${TEAM.length}</span></button></div>`;
+    if (state.msgTab === 'chats') {
+      let list = [...MESSAGES].sort((x, y) => dtm(lastMsg(y).at) - dtm(lastMsg(x).at));
+      if (state.msgFilter === 'unread') list = list.filter((m) => m.unread);
+      body.innerHTML = `<div class="msg-tools">${tabs}<div class="msg-filters"><button class="chip ${state.msgFilter === 'all' ? 'active' : ''}" data-msg-filter="all">All</button><button class="chip ${state.msgFilter === 'unread' ? 'active' : ''}" data-msg-filter="unread">Unread</button></div></div>
+        ${list.map((m) => { const p = byId(m.person); const last = lastMsg(m); return `<button class="msg ${m.unread ? 'unread' : ''}" data-thread="${m.id}"><span class="av-wrap">${avatar(p)}<i class="presence ${PRESENCE[p.id] || 'offline'}"></i></span><div><div class="when"><span>${ago(last.at)}</span>${m.unread ? '<span class="unread-dot"></span>' : ''}</div><div class="h"><strong>${esc(p.name)}</strong></div><div class="role">${esc(p.role)}</div><div class="t">${last.from === 'me' ? 'You: ' : ''}${esc(last.text)}</div></div></button>`; }).join('') || '<div class="empty">No unread messages.</div>'}`;
+    } else {
+      const q = state.contactSearch.toLowerCase();
+      const contacts = [...TEAM].filter((p) => !q || p.name.toLowerCase().includes(q) || p.role.toLowerCase().includes(q)).sort((x, y) => x.name.localeCompare(y.name));
+      const label = { online: 'Online', away: 'Away', offline: 'Offline', leave: 'On leave' };
+      body.innerHTML = `<div class="msg-tools">${tabs}<label class="mini-search wide">${ico('search')}<input type="search" placeholder="Search contacts" value="${esc(state.contactSearch)}" data-contact-search aria-label="Search contacts"></label></div>
+        ${contacts.map((p) => `<button class="contact" data-message="${p.id}"><span class="av-wrap">${avatar(p)}<i class="presence ${PRESENCE[p.id] || 'offline'}"></i></span><div class="who"><strong>${esc(p.name)}</strong><span>${esc(p.role)} · ${label[PRESENCE[p.id]] || 'Offline'}</span></div>${ico('chevR')}</button>`).join('') || '<div class="empty">No one matches.</div>'}`;
+    }
   } else if (state.panelMode === 'thread') {
-    const m = MESSAGES.find((x) => x.id === state.panelArg); const p = byId(m.person);
+    let m = MESSAGES.find((x) => x.id === state.panelArg);
+    if (!m && String(state.panelArg).startsWith('new:')) {
+      const pid = state.panelArg.slice(4);
+      m = { id: 'c' + (MESSAGES.length + 1), person: pid, unread: false, thread: [] };
+      MESSAGES.push(m); state.panelArg = m.id;
+    }
+    const p = byId(m.person);
     head.innerHTML = `Conversation`;
-    body.innerHTML = `<div class="thread"><div class="thread-head">${avatar(p)}<div class="who"><strong>${esc(p.name)}</strong><span>${esc(p.role)} · ${esc(p.site)}</span></div><button class="btn xs secondary" style="margin-left:auto" data-person="${p.id}">Profile</button></div>
-      <div class="thread-body">
-        <div class="bubble them">${esc(m.text)}<time>${m.when}</time></div>
-        ${m.id === 'c1' ? `<div class="bubble me">Thanks Sarah, I'll get to it before Friday.<time>Just now</time></div>` : ''}
-      </div>
-      <div class="thread-compose"><div class="ctl"><input placeholder="Reply to ${esc(p.name.split(' ')[0])}" aria-label="Reply"></div><button class="btn sm primary" data-act="send-reply">Send</button></div></div>`;
+    let lastDay = '';
+    const bubbles = m.thread.map((b) => {
+      const day = dtm(b.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+      const sep = day !== lastDay ? `<div class="day-sep"><span>${day}</span></div>` : ''; lastDay = day;
+      return `${sep}<div class="bubble ${b.from}">${esc(b.text)}<time>${clock(b.at)}</time></div>`;
+    }).join('');
+    body.innerHTML = `<div class="thread"><div class="thread-head"><span class="av-wrap">${avatar(p)}<i class="presence ${PRESENCE[p.id] || 'offline'}"></i></span><div class="who"><strong>${esc(p.name)}</strong><span>${esc(p.role)} · ${esc(p.site)}</span></div><button class="btn xs secondary" style="margin-left:auto" data-person="${p.id}">Profile</button></div>
+      <div class="thread-body" id="thread-body">${bubbles || `<div class="empty">No messages yet. Say hello to ${esc(p.name.split(' ')[0])}.</div>`}</div>
+      <div class="thread-compose"><div class="ctl"><input id="thread-input" placeholder="Message ${esc(p.name.split(' ')[0])}" aria-label="Message" autocomplete="off"></div><button class="btn sm primary" data-act="send-reply" data-id="${m.id}">Send</button></div></div>`;
+    const tb = $('#thread-body'); if (tb) tb.scrollTop = tb.scrollHeight;
+  } else if (state.panelMode === 'notifications') {
+    head.innerHTML = `Notifications ${s.unreadNotifs ? `<span class="pill accent plain">${s.unreadNotifs} new</span>` : ''}`;
+    const icon = { message: 'chat', chase: 'mail', decision: 'calendar', safeguarding: 'shield', submit: 'clipboard', signed: 'check', system: 'info' };
+    const groups = [['Today', (n) => dtm(n.at).toDateString() === NOW.toDateString()], ['Earlier', (n) => dtm(n.at).toDateString() !== NOW.toDateString()]];
+    body.innerHTML = `<div class="msg-tools"><span class="toolbar-note">${s.unreadNotifs ? `${s.unreadNotifs} unread` : 'All caught up'}</span>${s.unreadNotifs ? `<button class="btn xs ghost" id="notif-readall">Mark all as read</button>` : ''}</div>
+      ${groups.map(([label, test]) => { const items = NOTIFICATIONS.filter(test); return items.length ? `<div class="group-label">${label}</div>${items.map((n) => `<button class="notif ${n.read ? '' : 'unread'}" data-notif="${n.id}"><span class="tile round ${n.tone}">${ico(icon[n.kind] || 'info')}</span><div><div class="when"><span>${ago(n.at)}</span>${n.read ? '' : '<span class="unread-dot"></span>'}</div><strong>${esc(n.title)}</strong><div class="t">${esc(n.body)}</div></div></button>`).join('')}` : ''; }).join('')}`;
   } else if (state.panelMode === 'person') {
     const p = s.people.find((x) => x.id === state.panelArg);
     head.innerHTML = `Team member`;
@@ -933,7 +979,7 @@ function toast(msg) {
 
 function doAction(act, id) {
   state.openMenu = null;
-  const p = TEAM.find((x) => x.id === id);
+  const p = TEAM.find((x) => x.id === id) || {};
   const s = derive();
   switch (act) {
     case 'signoff': { const rec = p.history[p.history.length - 1]; rec.signedOff = iso(TODAY); toast(`${p.name}'s ${rec.type.toLowerCase()} signed off. Compliance is now ${pct(derive().compliance)}.`); break; }
@@ -944,12 +990,18 @@ function doAction(act, id) {
     case 'extend': { p.paused.returns = iso(addDays(d(p.paused.returns), 28)); p.paused.decisionDue = p.paused.returns; toast(`${p.name}'s leave extended to ${fmt(d(p.paused.returns))}.`); break; }
     case 'note': toast(`Note added to ${p.name}'s record.`); render(); return;
     case 'open': openPanel('person', p.id); return;
-    case 'message': { const m = MESSAGES.find((x) => x.person === p.id) || MESSAGES[0]; openPanel('thread', m.id); return; }
+    case 'message': { const m = MESSAGES.find((x) => x.person === p.id); openPanel('thread', m ? m.id : 'new:' + p.id); return; }
     case 'export': toast('Export queued. You will get it by email in a minute or two.'); return;
     case 'schedule-report': toast('Report scheduled monthly.'); return;
     case 'reassign': toast(`Reassign ${p.name}: pick a new supervisor (not in prototype).`); return;
     case 'create': toast('Draft sent to the supervisee.'); go('/dashboard'); return;
-    case 'send-reply': toast('Reply sent.'); return;
+    case 'send-reply': {
+      const input = $('#thread-input'); const text = input && input.value.trim();
+      const m = MESSAGES.find((x) => x.id === id);
+      if (!text || !m) { if (input) input.focus(); return; }
+      m.thread.push({ from: 'me', at: iso(NOW) + 'T' + String(NOW.getHours()).padStart(2, '0') + ':' + String(NOW.getMinutes()).padStart(2, '0'), text });
+      m.unread = false; render(); return;
+    }
     case 'refer': case 'monitor': case 'close-flag': { const f = SAFEGUARDING.find((x) => x.id === id); f.status = 'closed'; f.closed = iso(TODAY); f.decision = act; toast(act === 'refer' ? 'Referred to the local authority. Decision recorded.' : act === 'monitor' ? 'Set to internal monitoring. Decision recorded.' : 'Closed with no concern. Decision recorded.'); break; }
   }
   render();
@@ -1016,7 +1068,7 @@ function openPanel(mode, arg = null) {
 
 document.addEventListener('click', (e) => {
   if (state.openMenu && !e.target.closest('[data-menu-wrap]')) { state.openMenu = null; render(); }
-  const t = e.target.closest('[data-group],[data-scroll],[data-go],[data-person],[data-act],[data-thread],[data-msg-filter],[data-cycle-filter],[data-sort],[data-cal],[data-message],[data-nav],#btn-menu,#btn-chat,#btn-notes,#panel-close,#panel-back,#scrim,#announce-prev,#announce-next,#announce-close,#btn-theme,#promo-close,[data-range],[data-menu],[data-attn-filter]');
+  const t = e.target.closest('[data-group],[data-scroll],[data-go],[data-person],[data-act],[data-thread],[data-msg-filter],[data-cycle-filter],[data-sort],[data-cal],[data-message],[data-nav],#btn-menu,#btn-chat,#btn-notes,#panel-close,#panel-back,#scrim,#announce-prev,#announce-next,#announce-close,#btn-theme,#promo-close,[data-range],[data-menu],[data-attn-filter],#btn-bell,[data-msg-tab],[data-notif],#notif-readall');
   if (!t) return;
   if (t.dataset.group) {
     const g = NAV.find((x) => x.id === t.dataset.group);
@@ -1030,7 +1082,7 @@ document.addEventListener('click', (e) => {
   if (t.dataset.go) { go(t.dataset.go); return; }
   if (t.hasAttribute('data-nav')) { return; } // plain anchor, hashchange handles it
   if (t.dataset.person) { state.panelReturn = state.panelMode === 'thread' ? state.panelArg : null; openPanel('person', t.dataset.person); return; }
-  if (t.dataset.message) { const m = MESSAGES.find((x) => x.person === t.dataset.message) || MESSAGES[0]; openPanel('thread', m.id); return; }
+  if (t.dataset.message) { const m = MESSAGES.find((x) => x.person === t.dataset.message); openPanel('thread', m ? m.id : 'new:' + t.dataset.message); return; }
   if (t.dataset.thread) { const m = MESSAGES.find((x) => x.id === t.dataset.thread); m.unread = false; openPanel('thread', m.id); return; }
   if (t.dataset.msgFilter) { state.msgFilter = t.dataset.msgFilter; render(); return; }
   if (t.dataset.attnFilter) { state.attnFilter = t.dataset.attnFilter; render(); return; }
@@ -1047,12 +1099,27 @@ document.addEventListener('click', (e) => {
   if (t.id === 'announce-next') { state.announceIdx = (state.announceIdx + 1) % ANNOUNCEMENTS.length; render(); return; }
   if (t.id === 'announce-close') { state.announceHidden = true; render(); return; }
   if (t.id === 'btn-theme') { toggleTheme(); return; }
+  if (t.id === 'btn-bell') { if (state.panelOpen && state.panelMode === 'notifications') { state.panelOpen = false; render(); } else openPanel('notifications'); return; }
+  if (t.dataset.msgTab) { state.msgTab = t.dataset.msgTab; render(); return; }
+  if (t.id === 'notif-readall') { NOTIFICATIONS.forEach((n) => (n.read = true)); render(); return; }
+  if (t.dataset.notif) {
+    const n = NOTIFICATIONS.find((x) => x.id === t.dataset.notif); n.read = true;
+    if (n.go.startsWith('thread:')) { const m = MESSAGES.find((x) => x.id === n.go.slice(7)); m.unread = false; openPanel('thread', m.id); }
+    else if (n.go.startsWith('person:')) openPanel('person', n.go.slice(7));
+    else { state.panelOpen = false; go(n.go); }
+    return;
+  }
   if (t.id === 'promo-close') { $('#promo').hidden = true; return; }
   if (t.dataset.menu) { state.openMenu = state.openMenu === t.dataset.menu ? null : t.dataset.menu; render(); return; }
   if (t.dataset.range) { state.trendRange = t.dataset.range; render(); return; }
 });
 
 document.addEventListener('input', (e) => {
+  if (e.target.matches('[data-contact-search]')) {
+    state.contactSearch = e.target.value; const pos = e.target.selectionStart; render();
+    const el = $('[data-contact-search]'); if (el) { el.focus(); el.setSelectionRange(pos, pos); }
+    return;
+  }
   if (e.target.matches('[data-cycle-search]')) {
     state.cycleSearch = e.target.value;
     const pos = e.target.selectionStart;
@@ -1062,6 +1129,7 @@ document.addEventListener('input', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.target.id === 'thread-input') { const btn = $('[data-act="send-reply"]'); if (btn) doAction('send-reply', btn.dataset.id); return; }
   if (e.key === 'Escape' && state.openMenu) { state.openMenu = null; render(); return; }
   if (e.key === 'Escape' && state.panelOpen) { state.panelOpen = false; render(); }
   if ((e.key === 'd' || e.key === 'D') && !e.metaKey && !e.ctrlKey && !/input|textarea/i.test(e.target.tagName)) toggleTheme();

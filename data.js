@@ -175,18 +175,53 @@ const SAFEGUARDING = [
   },
 ];
 
-/* Conversations for the messages panel. */
+/* Conversations for the messages panel. Newest message last. Times are
+   on the prototype's fixed clock (2 September 2026, 14:10). */
 const MESSAGES = [
-  { id: 'c1', person: 'sm', when: '10 min ago', unread: true,
-    text: "I've submitted my supervision notes for Q2. Can you review before Friday?" },
-  { id: 'c2', person: 'rp', when: '2 hours ago', unread: true,
-    text: "When can we schedule the probation review? It's due by the middle of the month." },
-  { id: 'c3', person: 'ps', when: 'Yesterday', unread: false,
-    text: 'All PDP actions completed for Q2. Evidence is attached to each objective.' },
-  { id: 'c4', person: 'mt', when: '2 days ago', unread: false,
-    text: 'Can you verify the medication competency evidence I uploaded?' },
-  { id: 'c5', person: 'ah', when: '3 days ago', unread: false,
-    text: 'Q2 compliance report is ready for your review. CQC audit next month.' },
+  { id: 'c1', person: 'sm', unread: true, thread: [
+    { from: 'me', at: '2026-08-24T16:05', text: 'Thanks for today Sarah. Add your reflections when you get a minute and submit.' },
+    { from: 'them', at: '2026-08-24T18:40', text: 'Done, submitted just now. I flagged the thing we discussed about the night shift in the notes.' },
+    { from: 'them', at: '2026-09-02T14:00', text: "I've submitted my supervision notes for Q2. Can you review before Friday?" },
+  ] },
+  { id: 'c2', person: 'rp', unread: true, thread: [
+    { from: 'them', at: '2026-08-30T09:12', text: 'Morning James. Is there anything I should prepare for the probation review?' },
+    { from: 'me', at: '2026-08-30T10:02', text: 'Just your induction checklist and any shifts you found hard. We will go through the competencies together.' },
+    { from: 'them', at: '2026-09-02T12:10', text: "When can we schedule the probation review? It's due by the middle of the month." },
+  ] },
+  { id: 'c3', person: 'ps', unread: false, thread: [
+    { from: 'them', at: '2026-09-01T15:30', text: 'All PDP actions completed for Q2. Evidence is attached to each objective.' },
+    { from: 'me', at: '2026-09-01T16:45', text: 'Brilliant, well done. I will look through them before our next supervision on the 16th.' },
+  ] },
+  { id: 'c4', person: 'mt', unread: false, thread: [
+    { from: 'them', at: '2026-08-31T11:20', text: 'Can you verify the medication competency evidence I uploaded?' },
+    { from: 'me', at: '2026-08-31T13:05', text: 'Seen it, looks complete. Verified.' },
+    { from: 'them', at: '2026-08-31T13:07', text: 'Thanks!' },
+  ] },
+  { id: 'c5', person: 'ah', unread: false, thread: [
+    { from: 'them', at: '2026-08-30T08:45', text: 'Q2 compliance report is ready for your review. CQC audit next month.' },
+    { from: 'me', at: '2026-08-30T09:30', text: 'Thanks Amina. I will export the evidence pack once Sarah and Tom are closed off.' },
+  ] },
+  { id: 'c6', person: 'tw', unread: false, thread: [
+    { from: 'me', at: '2026-07-21T09:00', text: 'Hi Tom, we missed the supervision on the 19th. Can you send me a couple of dates that work this week?' },
+    { from: 'me', at: '2026-08-11T09:00', text: 'Tom, this is now overdue. Please pick a slot from the calendar link or reply with a time.' },
+    { from: 'me', at: '2026-09-01T09:00', text: 'Reminder: your quarterly supervision is 44 days overdue. I have provisionally booked Monday 7 Sept at 10:00.' },
+  ] },
+];
+
+/* Presence for the contacts list. */
+const PRESENCE = { sm: 'online', ps: 'online', ah: 'online', dc: 'away', mt: 'offline', tw: 'offline', lo: 'offline', ga: 'away', rp: 'online', ak: 'leave' };
+
+/* Notifications, newest first. `go` is a route or a person id. */
+const NOTIFICATIONS = [
+  { id: 'n1', at: '2026-09-02T14:00', kind: 'message', tone: 'info', title: 'Sarah Mitchell messaged you', body: 'Can you review before Friday?', go: 'thread:c1', read: false },
+  { id: 'n2', at: '2026-09-02T12:10', kind: 'message', tone: 'info', title: 'Ravi Patel messaged you', body: 'When can we schedule the probation review?', go: 'thread:c2', read: false },
+  { id: 'n3', at: '2026-09-02T09:00', kind: 'chase', tone: 'crit', title: 'Chase to Tom Whitfield not opened', body: 'Sent yesterday 09:00. Sixth chase on this record.', go: 'person:tw', read: false },
+  { id: 'n4', at: '2026-09-01T17:30', kind: 'decision', tone: 'warn', title: 'Return-to-work decision due 10 Sept', body: "Aisha Khan's maternity leave ends. Book a return supervision or extend leave.", go: 'person:ak', read: false },
+  { id: 'n5', at: '2026-08-28T16:20', kind: 'safeguarding', tone: 'crit', title: 'Safeguarding flag raised', body: 'Disclosure made during Sarah Mitchell\'s supervision. Triage decision outstanding.', go: '/safeguarding/triage', read: true },
+  { id: 'n6', at: '2026-08-24T18:40', kind: 'submit', tone: 'info', title: 'Sarah Mitchell submitted Q1 supervision', body: 'Waiting on your sign off.', go: 'person:sm', read: true },
+  { id: 'n7', at: '2026-08-24T15:10', kind: 'signed', tone: 'good', title: 'Michael Thompson signed off', body: 'Quarterly supervision complete. Next due 16 Nov.', go: 'person:mt', read: true },
+  { id: 'n8', at: '2026-08-20T08:00', kind: 'system', tone: 'muted', title: 'Supervision templates updated', body: 'New records use the updated wellbeing section.', go: '/supervisions/new', read: true },
+  { id: 'n9', at: '2026-08-12T11:05', kind: 'signed', tone: 'good', title: 'Amina Hassan signed off', body: 'Quarterly supervision complete. Next due 4 Nov.', go: 'person:ah', read: true },
 ];
 
 /* Other managers, for the league table. Compliance for James is
