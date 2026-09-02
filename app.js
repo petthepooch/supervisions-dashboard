@@ -267,7 +267,11 @@ function renderTopbar(s) {
 
 /* Rendering: shared components ----------------------------------- */
 
-const avatar = (p, cls = '') => `<span class="avatar ${cls}" style="--h:${p.hue}">${p.initials || initials(p.name)}</span>`;
+/* Avatar: a photo when one exists, otherwise initials on a tinted disc. */
+const avatar = (p, cls = '') => {
+  const src = typeof AVATARS !== 'undefined' && AVATARS[p.id];
+  return `<span class="avatar ${cls} ${src ? 'has-photo' : ''}" style="--h:${p.hue}">${src ? `<img src="${src}" alt="" loading="lazy">` : (p.initials || initials(p.name))}</span>`;
+};
 const personBtn = (p, extra = '') => `<button data-person="${p.id}">${esc(p.name)}</button>${extra}`;
 const statusPill = (p) => `<span class="pill ${p.tone}">${esc(p.label)}</span>`;
 
@@ -1185,5 +1189,6 @@ function toggleTheme() {
   root.dataset.theme = dark ? 'light' : 'dark';
 }
 
+if (typeof AVATARS !== 'undefined' && AVATARS.jo) { const me = $('#me-avatar'); if (me) { me.classList.add('has-photo'); me.innerHTML = `<img src="${AVATARS.jo}" alt="">`; } }
 window.addEventListener('hashchange', onHashChange);
 onHashChange();

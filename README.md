@@ -17,6 +17,7 @@ npx -y serve .
 | `index.html` | App shell: nav, top bar, page area, side panel |
 | `dashboard.css` | Design tokens (light and dark), layout and every component |
 | `data.js` | The team, their supervision history, flags, messages. **Edit this to change the story.** |
+| `avatars.js` | Placeholder avatars as data URIs. Replace any entry with a staff photo (URL or data URI); missing entries fall back to initials |
 | `app.js` | Routing, two-level nav, section tabs with scroll-spy, side panel, and `derive()` which turns the data into every figure on screen |
 
 ## How it works
@@ -41,3 +42,6 @@ npx -y serve .
 
 The date is fixed at Wednesday 2 September 2026 (`TODAY` in `data.js`)
 so the sample story stays coherent.
+
+Avatars are illustrated placeholders generated with [DiceBear](https://www.dicebear.com/)
+"personas" (Draftbit, CC BY 4.0). Production should use staff photos with consent.
