@@ -588,14 +588,14 @@ function leagueCard(s) {
     <div class="card-head"><div><h3>Manager league table</h3><div class="sub">All registered managers, ${esc(ME.org)}. Rank is by compliance and held when you re-sort.</div></div>
       <button class="btn sm secondary" data-act="export">${ico('download')} Export</button></div>
     <div class="table-wrap"><table class="tbl">
-      <thead><tr>${th('rank', 'Rank')}${th('name', 'Manager')}${th('site', 'Site')}${th('team', 'Team', 'r')}${th('compliance', 'Team compliance')}${th('onTime', 'On time')}</tr></thead>
+      <thead><tr>${th('rank', 'Rank')}${th('name', 'Manager')}${th('site', 'Site')}${th('team', 'Team', 'r')}${th('compliance', 'Team compliance')}${th('onTime', 'On time', 'r')}</tr></thead>
       <tbody>${rows.map((r) => `<tr class="${r.live ? 'is-me' : ''}">
         <td class="rank num ${r.live ? 'you' : ''}">${r.rank}</td>
         <td><span class="mgr">${esc(r.name)}</span>${r.live ? ' <span class="pill accent plain" style="margin-left:6px">You</span>' : ''}</td>
         <td>${esc(r.site)}</td>
         <td class="r num">${r.team}</td>
         <td><div class="bar-cell"><span class="meter"><i class="${tone(r.compliance)}" style="width:${r.compliance * 100}%"></i></span><b class="num">${pct(r.compliance)}</b></div></td>
-        <td><div class="bar-cell"><span class="meter"><i class="${tone(r.onTime)}" style="width:${r.onTime * 100}%"></i></span><b class="num">${pct(r.onTime)}</b></div></td>
+        <td class="r"><span class="pill plain ${r.onTime >= 0.9 ? 'good' : r.onTime >= 0.75 ? 'warn' : 'crit'}">${pct(r.onTime)}</span></td>
       </tr>`).join('')}</tbody>
     </table></div>
   </div>`;
