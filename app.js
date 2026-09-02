@@ -346,11 +346,22 @@ function flatline() {
   return `<svg viewBox="0 0 220 30" preserveAspectRatio="none" aria-hidden="true"><line class="dash" x1="4" y1="15" x2="216" y2="15"/></svg>`;
 }
 
-function statCell({ cls = '', label, value, small = '', desc = '', foot = '', attr = '' }) {
+/* People summary that stays tidy at any count: up to three avatars,
+   then a +N chip, and a name line that names two people at most. */
+function peopleSummary(list, emptyText = 'Nobody') {
+  if (!list.length) return `<div class="people empty-people">${emptyText}</div>`;
+  const shown = list.slice(0, 3);
+  const names = list.length === 1 ? list[0].name
+    : list.length === 2 ? `${list[0].name.split(' ')[0]} and ${list[1].name.split(' ')[0]}`
+    : `${list[0].name.split(' ')[0]}, ${list[1].name.split(' ')[0]} and ${list.length - 2} other${list.length - 2 === 1 ? '' : 's'}`;
+  return `<div class="people"><span class="stack">${shown.map((p) => avatar(p, 'sm')).join('')}${list.length > 3 ? `<span class="avatar sm more">+${list.length - 3}</span>` : ''}</span><span class="names">${esc(names)}</span></div>`;
+}
+
+function statCell({ cls = '', label, value, facts = [], people = null, foot = '', attr = '' }) {
+  const right = people ? people : `<dl class="facts">${facts.map(([k, v, tone]) => `<dt>${k}</dt><dd class="num ${tone || ''}">${v}</dd>`).join('')}</dl>`;
   return `<button class="stat ${cls}" ${attr}>
     <span class="k">${label} ${ico('chevR')}</span>
-    <span class="v num">${value}${small ? `<small>${small}</small>` : ''}</span>
-    <span class="d">${desc || '&nbsp;'}</span>
+    <div class="body"><span class="v num">${value}</span><div class="side">${right}</div></div>
     <div class="foot">${foot}</div>
   </button>`;
 }
@@ -360,14 +371,28 @@ function statsRow(s) {
   const meter = (segs, target) => `<div class="meter thin ${target != null ? 'has-target' : ''}" ${target != null ? `style="--t:${target * 100}%"` : ''}>${segs.map(([w, c]) => `<i class="${c}" style="width:${Math.max(0, w) * 100}%"></i>`).join('')}</div>`;
   const nonCompliant = a - s.compliantCount;
   const oa = Math.max(1, s.openActions);
+  const pdpTotal = s.people.reduce((n, p) => n + p.pdp.objectives, 0), pdpDone = s.people.reduce((n, p) => n + p.pdp.complete, 0);
+  const pdpDue = s.people.filter((p) => d(p.pdp.review) <= addDays(TODAY, 30)).length;
   const overdueDays = s.overdue.length ? daysBetween(s.overdue[0].due, TODAY) : 0;
   return `<div class="stats">
-    ${statCell({ label: 'Team compliance', value: pct(s.compliance), small: s.gap ? `<span class="gap">${pct(1 - s.compliance)} gap to 100%</span>` : 'fully compliant', desc: `${s.compliantCount} of ${a} in date · ${nonCompliant} not compliant · target 90%`, foot: meter([[s.signedOff / a, ''], [(s.compliantCount - s.signedOff) / a, 'accent'], [nonCompliant / a, 'crit']], 0.9), attr: 'data-scroll="trend"' })}
-    ${statCell({ label: 'Signed off this quarter', value: s.signedOff, small: `of ${a}`, desc: `${s.booked} booked · ${s.drafting} drafting · ${s.notBooked} not booked`, foot: meter([[s.signedOff / a, ''], [s.booked / a, 'accent'], [s.drafting / a, 'muted']]), attr: 'data-scroll="cycle"' })}
-    ${statCell({ label: 'Awaiting your sign off', value: s.review.length, small: s.review.length ? s.review.map((p) => p.name.split(' ')[0]).join(', ') : 'nothing waiting', desc: s.review.length ? 'Counts towards compliance once you sign it.' : 'You are up to date.', foot: meter([[s.review.length / a, 'info']]), attr: 'data-scroll="attention"' })}
-    ${statCell({ cls: s.overdue.length ? 'hl' : '', label: 'Overdue', value: `${s.overdue.length}${s.overdue.length ? ico('warnTri').replace('<svg ', '<svg class="warn-ico" ') : ''}`, small: s.overdue.length ? s.overdue.map((p) => p.name).join(', ') : 'nobody', desc: s.overdue.length ? `${plural(overdueDays, 'day')} overdue, ${plural(s.overdue[0].chases.length, 'chase')} sent` : (s.atRisk.length ? `${plural(s.atRisk.length, 'person', 'people')} due within ${POLICY.atRiskDays} days` : `Nobody due within ${POLICY.atRiskDays} days`), foot: s.overdue.length ? `<span class="btn xs warn">${ico('mail')} Chase now</span>` : meter([[0, '']]), attr: 'data-scroll="attention"' })}
-    ${statCell({ label: 'Open actions', value: s.openActions, small: 'need you', desc: `${plural(s.overdue.length, 'overdue')} · ${s.review.length} to sign off · ${plural(s.openFlags.length, 'flag')} · ${plural(s.decisions.length, 'decision')}`, foot: meter([[s.overdue.length / oa, 'crit'], [s.review.length / oa, 'info'], [s.openFlags.length / oa, ''], [s.decisions.length / oa, 'warn']]), attr: 'data-scroll="attention"' })}
-    ${statCell({ label: 'PDP progress', value: pct(pdpProgress(s)), small: 'objectives complete', desc: `${s.people.filter((p) => d(p.pdp.review) <= addDays(TODAY, 30)).length} reviews due in the next 30 days`, foot: meter([[pdpProgress(s), '']]), attr: 'data-go="/development/pdps"' })}
+    ${statCell({ label: 'Team compliance', value: pct(s.compliance),
+      facts: [['In date', `${s.compliantCount} of ${a}`], ['Gap to 100%', s.gap ? pct(1 - s.compliance) : 'None', s.gap ? 'warn' : 'good'], ['Target', '90%']],
+      foot: meter([[s.signedOff / a, ''], [(s.compliantCount - s.signedOff) / a, 'accent'], [nonCompliant / a, 'crit']], 0.9), attr: 'data-scroll="trend"' })}
+    ${statCell({ label: 'Signed off this quarter', value: `${s.signedOff}<small>of ${a}</small>`,
+      facts: [['Booked', s.booked], ['Drafting', s.drafting], ['Not booked', s.notBooked, s.notBooked ? 'warn' : '']],
+      foot: meter([[s.signedOff / a, ''], [s.booked / a, 'accent'], [s.drafting / a, 'muted']]), attr: 'data-scroll="cycle"' })}
+    ${statCell({ label: 'Awaiting your sign off', value: s.review.length,
+      people: peopleSummary(s.review, 'Nothing waiting on you') + (s.review.length ? `<dl class="facts"><dt>Waiting longest</dt><dd class="num ${Math.max(...s.review.map((p) => daysBetween(d(p.current.submitted), TODAY))) > 5 ? 'warn' : ''}">${plural(Math.max(...s.review.map((p) => daysBetween(d(p.current.submitted), TODAY))), 'day')}</dd><dt>Counts once signed</dt><dd class="num">+${Math.round((s.review.length / s.active.length) * 100)}%</dd></dl>` : `<dl class="facts"><dt>Signed this quarter</dt><dd class="num">${s.signedOff}</dd></dl>`),
+      foot: meter([[s.review.length / a, 'info']]), attr: 'data-scroll="attention"' })}
+    ${statCell({ cls: s.overdue.length ? 'hl' : '', label: 'Overdue', value: `${s.overdue.length}${s.overdue.length ? ico('warnTri').replace('<svg ', '<svg class="warn-ico" ') : ''}`,
+      people: s.overdue.length ? peopleSummary(s.overdue) + `<dl class="facts"><dt>Longest</dt><dd class="num crit">${plural(overdueDays, 'day')}</dd><dt>Chases sent</dt><dd class="num">${s.overdue.reduce((n, p) => n + p.chases.length, 0)}</dd></dl>` : `<dl class="facts"><dt>Due in 14 days</dt><dd class="num">${s.atRisk.length}</dd><dt>Overdue</dt><dd class="num good">None</dd></dl>`,
+      foot: s.overdue.length ? `<span class="btn xs warn">${ico('mail')} Chase now</span>` : meter([[0, '']]), attr: 'data-scroll="attention"' })}
+    ${statCell({ label: 'Open actions', value: s.openActions,
+      facts: [['Overdue', s.overdue.length, s.overdue.length ? 'crit' : ''], ['To sign off', s.review.length, s.review.length ? 'info' : ''], ['Flags', s.openFlags.length, s.openFlags.length ? 'crit' : ''], ['Decisions', s.decisions.length, s.decisions.length ? 'warn' : '']],
+      foot: meter([[s.overdue.length / oa, 'crit'], [s.review.length / oa, 'info'], [s.openFlags.length / oa, ''], [s.decisions.length / oa, 'warn']]), attr: 'data-scroll="attention"' })}
+    ${statCell({ label: 'PDP progress', value: pct(pdpProgress(s)),
+      facts: [['Objectives done', `${pdpDone} of ${pdpTotal}`], ['Reviews due', `${pdpDue} in 30 days`, pdpDue ? 'warn' : '']],
+      foot: meter([[pdpProgress(s), '']]), attr: 'data-go="/development/pdps"' })}
   </div>`;
 }
 const pdpProgress = (s) => { const t = s.people.reduce((n, p) => n + p.pdp.objectives, 0); const c = s.people.reduce((n, p) => n + p.pdp.complete, 0); return t ? c / t : 0; };
