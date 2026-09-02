@@ -360,8 +360,8 @@ function peopleSummary(list, emptyText = 'Nobody') {
 function statCell({ cls = '', label, value, facts = [], people = null, foot = '', attr = '' }) {
   const right = people ? people : `<dl class="facts">${facts.map(([k, v, tone]) => `<dt>${k}</dt><dd class="num ${tone || ''}">${v}</dd>`).join('')}</dl>`;
   return `<button class="stat ${cls}" ${attr}>
-    <span class="k">${label} ${ico('chevR')}</span>
-    <div class="body"><span class="v num">${value}</span><div class="side">${right}</div></div>
+    <div class="head"><span class="k">${label} ${ico('chevR')}</span><span class="v num">${value}</span></div>
+    <div class="side">${right}</div>
     <div class="foot">${foot}</div>
   </button>`;
 }

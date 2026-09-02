@@ -488,16 +488,16 @@ svg.i { width: 18px; height: 18px; flex: none; }
 .stat.hl:hover { background: var(--warn-soft); }
 .stat .k { display: inline-flex; align-items: center; gap: 4px; font-size: 15px; font-weight: 400; color: var(--ink-2); }
 .stat .k svg { width: 14px; height: 14px; color: var(--ink-3); }
-.stat .body { display: flex; align-items: flex-start; gap: 18px; margin-top: 6px; }
-.stat .side { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
-.stat .v { font-size: 32px; min-height: 34px; flex: none; min-width: 64px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.2; color: var(--ink); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
+.stat .head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.stat .side { min-width: 0; display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.stat .v { font-size: 28px; min-height: 0; flex: none; justify-content: flex-end; margin-top: -6px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.2; color: var(--ink); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
 .stat .v small { white-space: nowrap; margin-left: 2px; font-size: 13.5px; font-weight: 400; color: var(--ink-2); letter-spacing: 0; }
 .stat .v .warn-ico { width: 18px; height: 18px; color: var(--warn); }
-.facts { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; row-gap: 3px; margin: 2px 0 0; font-size: 13px; }
+.facts { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; row-gap: 4px; margin: 0; font-size: 13.5px; }
 .facts dt { color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .facts dd { margin: 0; color: var(--ink); font-weight: 500; text-align: right; white-space: nowrap; }
 .facts dd.warn { color: var(--warn); } .facts dd.crit { color: var(--crit); } .facts dd.good { color: var(--good); } .facts dd.info { color: var(--info); }
-.people { display: flex; align-items: center; gap: 10px; min-width: 0; margin-top: 2px; }
+.people { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .people .stack { display: inline-flex; flex: none; }
 .people .stack .avatar { border: 2px solid var(--surface); margin-left: -8px; }
 .people .stack .avatar:first-child { margin-left: 0; }
