@@ -463,7 +463,7 @@ svg.i { width: 18px; height: 18px; flex: none; }
    overdue; the quarter bar is a single-hue sequential ramp. */
 .strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: stretch; }
 .scard {
-  display: flex; flex-direction: column;
+  display: flex; flex-direction: column; text-align: left;
   padding: 18px 18px 16px;
   border-radius: var(--radius-l);
   background: var(--surface); border: 1px solid var(--line);
@@ -480,7 +480,9 @@ svg.i { width: 18px; height: 18px; flex: none; }
 .sbar { position: relative; height: 6px; border-radius: 3px; background: var(--surface-3); }
 .sbar .fill { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: var(--ink); }
 .sbar .mark { position: absolute; top: -4px; bottom: -4px; width: 1px; background: color-mix(in srgb, var(--ink) 40%, transparent); }
-.sbar.stack { display: flex; gap: 2px; background: transparent; margin-bottom: 14px; }
+.sbar.stack { display: flex; gap: 2px; background: transparent; }
+.sbar.stack i { cursor: default; transition: opacity var(--dur) var(--ease); }
+.sbar.stack:hover i:not(:hover) { opacity: 0.55; }
 .sbar.stack i { display: block; height: 100%; }
 .sbar.stack i:first-child { border-radius: 3px 0 0 3px; }
 .sbar.stack i:last-child { border-radius: 0 3px 3px 0; }
@@ -491,37 +493,26 @@ svg.i { width: 18px; height: 18px; flex: none; }
 .sbar .ink-8 { background: color-mix(in srgb, var(--ink) 8%, transparent); }
 .sbar .danger { background: var(--crit); }
 .scap { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: color-mix(in srgb, var(--ink) 55%, transparent); }
-.srows { margin: auto 0 0; font-size: 13px; }
-.srows > div { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; }
-.srows dt { color: color-mix(in srgb, var(--ink) 60%, transparent); }
-.srows dd { margin: 0; font-weight: 500; color: var(--ink); font-variant-numeric: tabular-nums lining-nums; }
-.srows > div.danger dt, .srows > div.danger dd { color: var(--crit); }
-.srowlist { display: flex; flex-direction: column; margin-top: -2px; }
-.srow {
-  display: flex; align-items: center; gap: 10px;
-  min-height: 44px; padding: 8px 0;
-  border-top: 1px solid var(--line);
-  text-align: left; width: 100%;
-  transition: background var(--dur) var(--ease);
+.segcap { display: flex; flex-wrap: wrap; gap: 4px 6px; }
+.segcap b { color: var(--ink); font-weight: 500; }
+.segcap .danger, .segcap .danger b { color: var(--crit); }
+.segcap .sep { color: color-mix(in srgb, var(--ink) 30%, transparent); }
+.sbar.timeline { overflow: visible; }
+.sbar.timeline .today { position: absolute; left: 0; top: -4px; bottom: -4px; width: 1px; background: color-mix(in srgb, var(--ink) 40%, transparent); }
+.sbar.timeline .due { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%; background: var(--ink); border: 2px solid var(--surface); transform: translate(-50%, -50%); cursor: default; transition: transform var(--dur) var(--ease); }
+.sbar.timeline .due:hover { transform: translate(-50%, -50%) scale(1.25); }
+.sbar.timeline .due.danger { background: var(--crit); }
+.ui-tip {
+  position: fixed; z-index: 70; pointer-events: none;
+  transform: translate(-50%, calc(-100% - 10px));
+  background: var(--ink); color: var(--ink-inverse);
+  padding: 8px 11px; border-radius: 8px; font-size: 12.5px; line-height: 1.35;
+  display: flex; flex-direction: column; gap: 2px; white-space: nowrap;
+  opacity: 0; transition: opacity 120ms var(--ease);
 }
-.srow:hover { background: var(--surface-2); }
-.srow > svg { width: 16px; height: 16px; flex: none; color: color-mix(in srgb, var(--ink) 40%, transparent); }
-.sav {
-  --h: 200;
-  width: 24px; height: 24px; flex: none; border-radius: 50%;
-  display: grid; place-items: center;
-  font-size: 11px; font-weight: 500;
-  background: color-mix(in srgb, var(--ink) 10%, transparent); color: var(--ink);
-}
-.sav svg { width: 13px; height: 13px; }
-.sav.danger { background: var(--crit-soft); color: var(--crit); }
-.stxt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.stxt .t { font-size: 13px; font-weight: 500; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.stxt .m { font-size: 12px; color: color-mix(in srgb, var(--ink) 60%, transparent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.stxt .m.danger { color: var(--crit); }
-.srow.more .m { font-size: 13px; }
-.snone { margin-top: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; color: color-mix(in srgb, var(--ink) 60%, transparent); }
-.snone svg { width: 16px; height: 16px; color: var(--good); }
+.ui-tip.on { opacity: 1; }
+.ui-tip b { font-weight: 600; }
+.ui-tip span { opacity: 0.75; }
 .strip-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 4px 0; font-size: 13px; color: color-mix(in srgb, var(--ink) 60%, transparent); }
 .strip-foot b { color: var(--ink); font-weight: 500; }
 .strip-foot a { display: inline-flex; align-items: center; gap: 4px; color: var(--ink); font-weight: 500; }

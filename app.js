@@ -306,7 +306,7 @@ function focusCards(s) {
   }));
   s.review.forEach((p) => cards.push({
     tone: 't-info', kind: 'Sign off', title: `${p.name}, ${s.q.key} sign off`,
-    why: `Submitted ${fmt(d(p.current.submitted))}. It counts towards compliance once you sign it off.`,
+    why: `Submitted ${fmt(d(p.current.submitted))}. Sign off → ${pct((s.compliantCount + 1) / s.active.length)} compliance.`,
     cta: 'Review record', action: `data-person="${p.id}"`, pill: `<span class="pill info">With you</span>`,
   }));
   s.decisions.forEach((p) => cards.push({
@@ -346,66 +346,68 @@ function flatline() {
   return `<svg viewBox="0 0 220 30" preserveAspectRatio="none" aria-hidden="true"><line class="dash" x1="4" y1="15" x2="216" y2="15"/></svg>`;
 }
 
-/* Stats strip: three cards derived from one status model. Every
-   figure comes from derive(); nothing is counted twice. */
+/* Stats strip: three cards, one shape each: label, number, one line of
+   context, one bar, two captions. Every figure comes from derive(). */
 function statsRow(s) {
   const total = s.active.length;
-  const inProgress = s.booked + s.drafting;
-  const rows = [
-    { key: 'signed', label: 'Signed off', value: s.signedOff, fill: 'ink' },
-    { key: 'progress', label: 'In progress', value: inProgress, fill: 'ink-45' },
-    { key: 'awaiting', label: 'Awaiting you', value: s.review.length, fill: 'ink-15' },
-    ...(s.notBooked ? [{ key: 'notbooked', label: 'Not booked', value: s.notBooked, fill: 'ink-8' }] : []),
-    { key: 'overdue', label: 'Overdue', value: s.overdue.length, fill: 'danger', danger: true },
-  ];
-  const sum = rows.reduce((n, r) => n + r.value, 0);
-  console.assert(sum === total, `Supervision states do not sum to total: ${sum} vs ${total}`);
   const target = 0.9;
-  const impact = total ? Math.round(100 / total) : 0;
-  const afterSignOff = total ? Math.round(((s.compliantCount + 1) / total) * 100) : 0;
+  const byStatus = (...st) => s.active.filter((p) => st.includes(p.status));
+  const segs = [
+    { label: 'Signed off', people: byStatus('complete'), fill: 'ink' },
+    { label: 'In progress', people: byStatus('booked', 'drafting'), fill: 'ink-45' },
+    { label: 'Awaiting you', people: byStatus('review'), fill: 'ink-15' },
+    { label: 'Not booked', people: byStatus('not_booked'), fill: 'ink-8' },
+    { label: 'Overdue', people: byStatus('overdue'), fill: 'danger', danger: true },
+  ];
+  const sum = segs.reduce((n, g) => n + g.people.length, 0);
+  console.assert(sum === total, `Supervision states do not sum to total: ${sum} vs ${total}`);
+  const tip = (g) => [`${g.label} (${g.people.length})`, ...g.people.map((p) => `${p.name} · ${p.label}`)].join('|');
 
-  // Card 3 items, most urgent first. Flags and decisions are grouped.
-  const items = [];
-  [...s.overdue].sort((x, y) => x.due - y.due).forEach((p) => items.push({ kind: 'overdue', initials: p.initials, hue: p.hue, title: p.name, meta: `Overdue ${plural(daysBetween(p.due, TODAY), 'day')}${p.chases.length >= 3 ? ` · ${p.chases.length} chases unanswered` : ''}`, attr: `data-person="${p.id}"`, n: 1 }));
-  [...s.review].sort((x, y) => d(x.current.submitted) - d(y.current.submitted)).forEach((p) => items.push({ kind: 'sign_off', initials: p.initials, hue: p.hue, title: p.name, meta: `Sign off → ${afterSignOff}% · waiting ${plural(daysBetween(d(p.current.submitted), TODAY), 'day')}`, attr: `data-person="${p.id}"`, n: 1 }));
-  const decisions = [...s.openFlags.map((f) => 'Safeguarding triage'), ...s.decisions.map((p) => `${p.name.split(' ')[0]} return to work`)];
-  if (decisions.length) items.push({ kind: 'decision', title: plural(decisions.length, 'decision'), meta: decisions.join(' · '), attr: 'data-scroll="attention"', n: decisions.length });
-  const count = items.reduce((n, it) => n + it.n, 0);
-  const visible = items.slice(0, 3); const overflow = items.length - visible.length;
+  // Next 14 days: records due soon that are not yet signed off.
+  const HORIZON = 14;
+  const soon = s.active.filter((p) => !['complete', 'review', 'overdue'].includes(p.status) && p.daysToDue >= 0 && p.daysToDue <= HORIZON).sort((x, y) => x.due - y.due);
+  const horizonEnd = addDays(TODAY, HORIZON);
 
-  const bar = (label, inner) => `<div class="sbar" role="img" aria-label="${esc(label)}">${inner}</div>`;
   const pdpTotal = s.people.reduce((n, p) => n + p.pdp.objectives, 0), pdpDone = s.people.reduce((n, p) => n + p.pdp.complete, 0);
   const pdpDue = s.people.filter((p) => d(p.pdp.review) <= addDays(TODAY, 30)).length;
+  const card = (label, num, unit, sub, foot, attr = '') => `<button class="scard" ${attr}>
+    <div class="slabel">${label}</div>
+    <div class="shead"><span class="snum num">${num}</span>${unit ? `<span class="sunit">${unit}</span>` : ''}</div>
+    <div class="ssub">${sub}</div>
+    <div class="sfoot">${foot}</div>
+  </button>`;
 
   return `<div class="strip">
-    <div class="scard">
-      <div class="slabel">Compliance</div>
-      <div class="shead"><span class="snum num">${total ? pct(s.compliance) : '—'}</span></div>
-      <div class="ssub">${s.compliantCount} of ${total} in date</div>
-      <div class="sfoot">
-        ${bar(`${pct(s.compliance)} compliant against a ${Math.round(target * 100)}% target`, `<i class="fill" style="width:${s.compliance * 100}%"></i><i class="mark" style="left:${target * 100}%"></i>`)}
-        <div class="scap"><span>Now</span><span>Target ${Math.round(target * 100)}%</span></div>
-      </div>
-    </div>
-    <div class="scard order-quarter">
-      <div class="slabel">This quarter</div>
-      <div class="shead"><span class="snum num">${total}</span><span class="sunit">due</span></div>
-      <div class="sbar stack" aria-hidden="true">${rows.filter((r) => r.value > 0).map((r) => `<i class="${r.fill}" style="flex:${r.value}"></i>`).join('')}</div>
-      <dl class="srows">${rows.map((r) => `<div class="${r.danger && r.value ? 'danger' : ''}"><dt>${r.label}</dt><dd class="num">${r.value}</dd></div>`).join('')}</dl>
-    </div>
-    <div class="scard order-needs">
-      <div class="slabel">Needs you</div>
-      <div class="shead"><span class="snum num">${count}</span></div>
-      ${items.length ? `<div class="srowlist">${visible.map((it) => `<button class="srow" ${it.attr}>
-          <span class="sav ${it.kind === 'overdue' ? 'danger' : ''}" ${it.hue != null ? `style="--h:${it.hue}"` : ''} aria-hidden="true">${it.initials || ico('shield')}</span>
-          <span class="stxt"><span class="t">${esc(it.title)}</span><span class="m ${it.kind === 'overdue' ? 'danger' : ''}">${esc(it.meta)}</span></span>
-          ${ico('chevR')}
-        </button>`).join('')}${overflow > 0 ? `<button class="srow more" data-scroll="attention"><span class="stxt"><span class="m">+${overflow} more</span></span>${ico('chevR')}</button>` : ''}</div>`
-        : `<div class="snone">${ico('check')} Nothing waiting on you</div>`}
-    </div>
+    ${card('Compliance', total ? pct(s.compliance) : '—', '', `${s.compliantCount} of ${total} in date`,
+      `<div class="sbar" role="img" aria-label="${pct(s.compliance)} compliant against a ${Math.round(target * 100)}% target"><i class="fill" style="width:${s.compliance * 100}%"></i><i class="mark" style="left:${target * 100}%"></i></div>
+       <div class="scap"><span>Now</span><span>Target ${Math.round(target * 100)}%</span></div>`, 'data-scroll="trend"')}
+    ${card('This quarter', total, 'due', `${s.signedOff} signed off, ${total - s.signedOff} still to close`,
+      `<div class="sbar stack" role="img" aria-label="${segs.filter((g) => g.people.length).map((g) => `${g.people.length} ${g.label.toLowerCase()}`).join(', ')}">${segs.filter((g) => g.people.length).map((g) => `<i class="${g.fill}" style="flex:${g.people.length}" data-tip="${esc(tip(g))}"></i>`).join('')}</div>
+       <div class="scap"><span class="segcap">${segs.filter((g) => g.people.length).map((g) => `<span class="${g.danger ? 'danger' : ''}"><b class="num">${g.people.length}</b> ${g.label.toLowerCase()}</span>`).join('<span class="sep">·</span>')}</span></div>`, 'data-scroll="cycle"')}
+    ${card('Next 14 days', soon.length, 'due', soon.length ? `${soon.map((p) => p.name.split(' ')[0]).join(', ')} ${soon.length === 1 ? 'is' : 'are'} due before ${fmt(horizonEnd)}` : `Nothing falls due before ${fmt(horizonEnd)}`,
+      `<div class="sbar timeline" role="img" aria-label="${soon.length ? soon.map((p) => `${p.name} due ${fmt(p.due)}`).join(', ') : 'Nothing due in the next 14 days'}">
+         <i class="today"></i>
+         ${soon.map((p) => `<i class="due ${p.status === 'not_booked' ? 'danger' : ''}" style="left:${(p.daysToDue / HORIZON) * 100}%" data-tip="${esc(`${p.name}|${p.type} · ${p.status === 'booked' ? 'booked' : p.status === 'drafting' ? 'drafting' : 'not booked'}|Due ${fmt(p.due, { weekday: 'short', day: 'numeric', month: 'short' })} · in ${plural(p.daysToDue, 'day')}`)}"></i>`).join('')}
+       </div>
+       <div class="scap"><span>Today</span><span>${HORIZON} days</span></div>`, 'data-scroll="calendar"')}
   </div>
   <div class="strip-foot"><span>PDP objectives <b class="num">${pdpDone} of ${pdpTotal}</b> · ${pdpDue} reviews due in 30 days</span><a href="#/development/pdps" data-nav>View PDPs ${ico('arrow')}</a></div>`;
 }
+
+/* Hover tooltip for any element carrying data-tip ("title|line|line"). */
+function uiTip(e) {
+  const el = e.target.closest && e.target.closest('[data-tip]');
+  let tipEl = $('#ui-tip');
+  if (!tipEl) { tipEl = document.createElement('div'); tipEl.id = 'ui-tip'; tipEl.className = 'ui-tip'; document.body.appendChild(tipEl); }
+  if (!el) { tipEl.classList.remove('on'); return; }
+  const [title, ...lines] = el.dataset.tip.split('|');
+  tipEl.innerHTML = `<b>${esc(title)}</b>${lines.map((l) => `<span>${esc(l)}</span>`).join('')}`;
+  const r = el.getBoundingClientRect();
+  tipEl.style.left = `${r.left + r.width / 2}px`; tipEl.style.top = `${r.top}px`;
+  tipEl.classList.add('on');
+}
+document.addEventListener('pointermove', uiTip);
+
 const pdpProgress = (s) => { const t = s.people.reduce((n, p) => n + p.pdp.objectives, 0); const c = s.people.reduce((n, p) => n + p.pdp.complete, 0); return t ? c / t : 0; };
 
 function attentionIntro(s) {
