@@ -306,7 +306,7 @@ function focusCards(s) {
   const kindIcon = { Chase: 'mail', 'Sign off': 'check', Decision: 'calendar', Safeguarding: 'shield', Report: 'download' };
   return `<div class="focus">${cards.slice(0, 4).map((c) => `
     <button class="focus-card ${c.tone}" ${c.action}>
-      <div class="top"><span class="tile">${ico(kindIcon[c.kind] || 'tasks')}</span>${c.pill}</div>
+      <div class="top"><span class="tile tone">${ico(kindIcon[c.kind] || 'tasks')}</span>${c.pill}</div>
       <span class="kind">${c.kind}</span>
       <div class="title">${esc(c.title)}</div>
       <div class="why">${esc(c.why)}</div>
