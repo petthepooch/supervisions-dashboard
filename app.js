@@ -291,7 +291,7 @@ function focusCards(s) {
     cta: 'Open reporting suite', action: `data-go="/reports/suite"`, pill: `<span class="pill accent plain">Due 25 Sep</span>`,
   });
   return `<div class="focus">${cards.slice(0, 4).map((c) => `
-    <button class="card focus-card ${c.tone}" ${c.action}>
+    <button class="focus-card ${c.tone}" ${c.action}>
       <div class="top"><span class="kind">${c.kind}</span>${c.pill}</div>
       <div class="title">${esc(c.title)}</div>
       <div class="why">${esc(c.why)}</div>
@@ -303,25 +303,25 @@ function statsRow(s) {
   const a = s.active.length;
   const tone = s.compliance >= 0.9 ? 'good' : s.compliance >= 0.75 ? 'warn' : 'crit';
   return `<div class="stats">
-    <button class="card stat tone-${tone}" data-scroll="cycle">
+    <button class="stat tone-${tone}" data-scroll="cycle">
       <span class="k">Team compliance</span>
       <span class="v num">${pct(s.compliance)}<small>${s.compliantCount} of ${a} in date</small></span>
       <span class="meter"><i style="width:${(s.signedOff / a) * 100}%"></i><i class="info" style="width:${((s.compliantCount - s.signedOff) / a) * 100}%"></i><i class="crit" style="width:${((a - s.compliantCount) / a) * 100}%"></i></span>
       <span class="d">${s.signedOff} signed off this quarter, ${s.compliantCount - s.signedOff} in date and booked or drafting</span>
     </button>
-    <button class="card stat ${s.openActions ? 'tone-warn' : 'tone-good'}" data-scroll="attention">
+    <button class="stat ${s.openActions ? 'tone-warn' : 'tone-good'}" data-scroll="attention">
       <span class="k">Open actions</span>
       <span class="v num">${s.openActions}<small>need you</small></span>
       <span class="d">${plural(s.overdue.length, 'overdue')} · ${s.review.length} awaiting sign off · ${plural(s.openFlags.length, 'safeguarding flag')} · ${plural(s.decisions.length, 'decision')}</span>
       <span class="link">Work through them</span>
     </button>
-    <button class="card stat ${s.overdue.length ? 'tone-crit' : 'tone-good'}" data-scroll="attention">
+    <button class="stat ${s.overdue.length ? 'tone-crit' : 'tone-good'}" data-scroll="attention">
       <span class="k">Overdue</span>
       <span class="v num">${s.overdue.length}<small>${s.overdue.length ? s.overdue.map((p) => p.name).join(', ') : 'nobody'}</small></span>
       <span class="d">${s.atRisk.length ? `${plural(s.atRisk.length, 'person', 'people')} due within ${POLICY.atRiskDays} days: ${s.atRisk.map((p) => p.name.split(' ')[0]).join(', ')}` : `Nobody due within ${POLICY.atRiskDays} days`}</span>
       <span class="link">${s.overdue.length ? 'Chase now' : 'View cycle'}</span>
     </button>
-    <button class="card stat" data-go="/development/pdps">
+    <button class="stat" data-go="/development/pdps">
       <span class="k">PDP progress</span>
       <span class="v num">${pct(pdpProgress(s))}<small>objectives complete</small></span>
       <span class="meter"><i style="width:${pdpProgress(s) * 100}%"></i></span>
