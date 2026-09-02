@@ -547,7 +547,7 @@ svg.i { width: 18px; height: 18px; flex: none; }
 /* Needs attention: intro sits above the card, filters attach to it. */
 .attn-intro {
   display: flex; align-items: center; gap: 24px;
-  padding: 2px 4px 18px;
+  padding: 0 4px 16px;
 }
 .fig-block {
   display: flex; flex-direction: column; align-items: flex-start; flex: none;
@@ -557,7 +557,8 @@ svg.i { width: 18px; height: 18px; flex: none; }
 .fig-block .fig-l { font-size: 12.5px; color: var(--ink-3); margin-top: 6px; }
 .fig-block.good .fig { color: var(--good); }
 .attn-intro .txt strong { display: block; font-size: 16px; font-weight: 600; }
-.attn-intro .txt p { color: var(--ink-2); font-size: 14px; margin-top: 2px; max-width: 78ch; }
+.attn-intro .txt p { color: var(--ink-2); font-size: 14px; margin-top: 2px; max-width: 90ch; }
+.stat .v small.gap, .stat .v .gap { color: var(--warn); font-weight: 500; }
 
 /* Toolbar: filters left, search or note right. */
 .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 24px; border-bottom: 1px solid var(--line); }
