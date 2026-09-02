@@ -346,68 +346,65 @@ function flatline() {
   return `<svg viewBox="0 0 220 30" preserveAspectRatio="none" aria-hidden="true"><line class="dash" x1="4" y1="15" x2="216" y2="15"/></svg>`;
 }
 
-/* People summary that stays tidy at any count: up to three avatars,
-   then a +N chip, and a name line that names two people at most. */
-function peopleSummary(list, emptyText = 'Nobody') {
-  if (!list.length) return `<div class="people empty-people">${emptyText}</div>`;
-  const shown = list.slice(0, 3);
-  const names = list.length === 1 ? list[0].name
-    : list.length === 2 ? `${list[0].name.split(' ')[0]} and ${list[1].name.split(' ')[0]}`
-    : `${list[0].name.split(' ')[0]}, ${list[1].name.split(' ')[0]} and ${list.length - 2} other${list.length - 2 === 1 ? '' : 's'}`;
-  return `<div class="people"><span class="stack">${shown.map((p) => avatar(p, 'sm')).join('')}${list.length > 3 ? `<span class="avatar sm more">+${list.length - 3}</span>` : ''}</span><span class="names">${esc(names)}</span></div>`;
-}
-
-function statCell({ cls = '', label, value, facts = [], people = null, foot = '', attr = '' }) {
-  const right = people ? people : `<dl class="facts">${facts.map(([k, v, tone, dot]) => `<dt>${dot ? `<i class="dot ${dot}"></i>` : ''}${k}</dt><dd class="num ${tone || ''}">${v}</dd>`).join('')}</dl>`;
-  return `<button class="stat ${cls}" ${attr}>
-    <div class="head"><span class="k">${label} ${ico('chevR')}</span><span class="v num">${value}</span></div>
-    <div class="side">${right}</div>
-    <div class="foot">${foot}</div>
-  </button>`;
-}
-
-/* Footer visuals. Each says something the figure does not. */
-const meter = (segs, target) => `<div class="meter thin ${target != null ? 'has-target' : ''}" ${target != null ? `style="--t:${target * 100}%"` : ''}>${segs.map(([w, c]) => `<i class="${c}" style="width:${Math.max(0, Math.min(1, w)) * 100}%"></i>`).join('')}</div>`;
-const cap = (l, r = '') => `<div class="cap"><span>${l}</span><span>${r}</span></div>`;
-/* One dot per person, coloured by where their quarter is. */
-function personDots(people) {
-  const tone = { complete: '', review: 'info', booked: 'accent', drafting: 'warn', not_booked: 'muted', overdue: 'crit', paused: 'hollow' };
-  const order = ['complete', 'review', 'booked', 'drafting', 'not_booked', 'overdue', 'paused'];
-  const sorted = [...people].sort((x, y) => order.indexOf(x.status) - order.indexOf(y.status));
-  return `<div class="dots">${sorted.map((p) => `<i class="${tone[p.status] || ''}" title="${esc(p.name)}: ${esc(p.label)}"></i>`).join('')}</div>`;
-}
-
+/* Stats strip: three cards derived from one status model. Every
+   figure comes from derive(); nothing is counted twice. */
 function statsRow(s) {
-  const a = s.active.length;
-  const nonCompliant = a - s.compliantCount;
-  const oa = Math.max(1, s.openActions);
+  const total = s.active.length;
+  const inProgress = s.booked + s.drafting;
+  const rows = [
+    { key: 'signed', label: 'Signed off', value: s.signedOff, fill: 'ink' },
+    { key: 'progress', label: 'In progress', value: inProgress, fill: 'ink-45' },
+    { key: 'awaiting', label: 'Awaiting you', value: s.review.length, fill: 'ink-15' },
+    ...(s.notBooked ? [{ key: 'notbooked', label: 'Not booked', value: s.notBooked, fill: 'ink-8' }] : []),
+    { key: 'overdue', label: 'Overdue', value: s.overdue.length, fill: 'danger', danger: true },
+  ];
+  const sum = rows.reduce((n, r) => n + r.value, 0);
+  console.assert(sum === total, `Supervision states do not sum to total: ${sum} vs ${total}`);
+  const target = 0.9;
+  const impact = total ? Math.round(100 / total) : 0;
+  const afterSignOff = total ? Math.round(((s.compliantCount + 1) / total) * 100) : 0;
+
+  // Card 3 items, most urgent first. Flags and decisions are grouped.
+  const items = [];
+  [...s.overdue].sort((x, y) => x.due - y.due).forEach((p) => items.push({ kind: 'overdue', initials: p.initials, hue: p.hue, title: p.name, meta: `Overdue ${plural(daysBetween(p.due, TODAY), 'day')}${p.chases.length >= 3 ? ` · ${p.chases.length} chases unanswered` : ''}`, attr: `data-person="${p.id}"`, n: 1 }));
+  [...s.review].sort((x, y) => d(x.current.submitted) - d(y.current.submitted)).forEach((p) => items.push({ kind: 'sign_off', initials: p.initials, hue: p.hue, title: p.name, meta: `Sign off → ${afterSignOff}% · waiting ${plural(daysBetween(d(p.current.submitted), TODAY), 'day')}`, attr: `data-person="${p.id}"`, n: 1 }));
+  const decisions = [...s.openFlags.map((f) => 'Safeguarding triage'), ...s.decisions.map((p) => `${p.name.split(' ')[0]} return to work`)];
+  if (decisions.length) items.push({ kind: 'decision', title: plural(decisions.length, 'decision'), meta: decisions.join(' · '), attr: 'data-scroll="attention"', n: decisions.length });
+  const count = items.reduce((n, it) => n + it.n, 0);
+  const visible = items.slice(0, 3); const overflow = items.length - visible.length;
+
+  const bar = (label, inner) => `<div class="sbar" role="img" aria-label="${esc(label)}">${inner}</div>`;
   const pdpTotal = s.people.reduce((n, p) => n + p.pdp.objectives, 0), pdpDone = s.people.reduce((n, p) => n + p.pdp.complete, 0);
   const pdpDue = s.people.filter((p) => d(p.pdp.review) <= addDays(TODAY, 30)).length;
-  const overdueDays = s.overdue.length ? daysBetween(s.overdue[0].due, TODAY) : 0;
-  const SIGNOFF_SLA = 5; // working days to sign off a submitted record
-  const waiting = s.review.length ? Math.max(...s.review.map((p) => daysBetween(d(p.current.submitted), TODAY))) : 0;
-  return `<div class="stats">
-    ${statCell({ label: 'Team compliance', value: pct(s.compliance),
-      facts: [['In date', `${s.compliantCount} of ${a}`], ['Gap to 100%', s.gap ? pct(1 - s.compliance) : 'None', s.gap ? 'warn' : 'good'], ['Target', '90%']],
-      foot: meter([[s.compliance, s.compliance >= 0.9 ? 'good' : '']], 0.9) + cap(`${pct(s.compliance)} compliant`, `Target 90%`), attr: 'data-scroll="trend"' })}
-    ${statCell({ label: 'Signed off this quarter', value: `${s.signedOff}<small>of ${a}</small>`,
-      facts: [['Booked', s.booked], ['Drafting', s.drafting], ['Not booked', s.notBooked, s.notBooked ? 'warn' : '']],
-      foot: personDots(s.active) + `<div class="cap legend-cap"><span><i class="dot"></i>Signed</span><span><i class="dot info"></i>To sign off</span><span><i class="dot accent"></i>Booked</span><span><i class="dot warn"></i>Drafting</span><span><i class="dot muted"></i>Not booked</span><span><i class="dot crit"></i>Overdue</span></div>`, attr: 'data-scroll="cycle"' })}
-    ${statCell({ label: 'Awaiting your sign off', value: s.review.length,
-      people: peopleSummary(s.review, 'Nothing waiting on you') + (s.review.length ? `<dl class="facts"><dt>Waiting longest</dt><dd class="num ${waiting > SIGNOFF_SLA ? 'crit' : ''}">${plural(waiting, 'day')}</dd><dt>Adds to compliance</dt><dd class="num good">+${Math.round((s.review.length / a) * 100)}%</dd></dl>` : `<dl class="facts"><dt>Signed this quarter</dt><dd class="num">${s.signedOff}</dd></dl>`),
-      foot: s.review.length
-        ? meter([[waiting / (SIGNOFF_SLA * 2), waiting > SIGNOFF_SLA ? 'crit' : 'info']], 0.5) + cap(`Waiting ${plural(waiting, 'day')}`, `Sign off within ${SIGNOFF_SLA} days`)
-        : meter([[0, '']]) + cap('Nothing waiting', ''), attr: 'data-scroll="attention"' })}
-    ${statCell({ label: 'Overdue', value: `${s.overdue.length}${s.overdue.length ? ico('warnTri').replace('<svg ', '<svg class="warn-ico" ') : ''}`,
-      people: s.overdue.length ? peopleSummary(s.overdue) + `<dl class="facts"><dt>Longest</dt><dd class="num crit">${plural(overdueDays, 'day')}</dd><dt>Chases sent</dt><dd class="num">${s.overdue.reduce((n, p) => n + p.chases.length, 0)}</dd></dl>` : `<dl class="facts"><dt>Due in 14 days</dt><dd class="num">${s.atRisk.length}</dd><dt>Overdue</dt><dd class="num good">None</dd></dl>`,
-      foot: s.overdue.length ? `<span class="btn xs critical">${ico('mail')} Chase now</span>` : meter([[0, '']]) + cap('Nobody overdue', ''), attr: 'data-scroll="attention"' })}
-    ${statCell({ label: 'Open actions', value: s.openActions,
-      facts: [['Overdue', s.overdue.length, s.overdue.length ? 'crit' : '', 'crit'], ['To sign off', s.review.length, s.review.length ? 'info' : '', 'info'], ['Flags', s.openFlags.length, s.openFlags.length ? 'crit' : '', 'ink'], ['Decisions', s.decisions.length, s.decisions.length ? 'warn' : '', 'warn']],
-      foot: meter([[s.overdue.length / oa, 'crit'], [s.review.length / oa, 'info'], [s.openFlags.length / oa, ''], [s.decisions.length / oa, 'warn']]) + cap(`${s.overdue.length + s.review.length} block compliance`, `${s.openFlags.length + s.decisions.length} need a decision`), attr: 'data-scroll="attention"' })}
-    ${statCell({ label: 'PDP progress', value: pct(pdpProgress(s)),
-      facts: [['Objectives done', `${pdpDone} of ${pdpTotal}`], ['Reviews due', `${pdpDue} in 30 days`, pdpDue ? 'warn' : '']],
-      foot: meter([[pdpProgress(s), '']]) + cap(`${pdpDone} done`, `${pdpTotal - pdpDone} to go`), attr: 'data-go="/development/pdps"' })}
-  </div>`;
+
+  return `<div class="strip">
+    <div class="scard">
+      <div class="slabel">Compliance</div>
+      <div class="shead"><span class="snum num">${total ? pct(s.compliance) : '—'}</span></div>
+      <div class="ssub">${s.compliantCount} of ${total} in date</div>
+      <div class="sfoot">
+        ${bar(`${pct(s.compliance)} compliant against a ${Math.round(target * 100)}% target`, `<i class="fill" style="width:${s.compliance * 100}%"></i><i class="mark" style="left:${target * 100}%"></i>`)}
+        <div class="scap"><span>Now</span><span>Target ${Math.round(target * 100)}%</span></div>
+      </div>
+    </div>
+    <div class="scard order-quarter">
+      <div class="slabel">This quarter</div>
+      <div class="shead"><span class="snum num">${total}</span><span class="sunit">due</span></div>
+      <div class="sbar stack" aria-hidden="true">${rows.filter((r) => r.value > 0).map((r) => `<i class="${r.fill}" style="flex:${r.value}"></i>`).join('')}</div>
+      <dl class="srows">${rows.map((r) => `<div class="${r.danger && r.value ? 'danger' : ''}"><dt>${r.label}</dt><dd class="num">${r.value}</dd></div>`).join('')}</dl>
+    </div>
+    <div class="scard order-needs">
+      <div class="slabel">Needs you</div>
+      <div class="shead"><span class="snum num">${count}</span></div>
+      ${items.length ? `<div class="srowlist">${visible.map((it) => `<button class="srow" ${it.attr}>
+          <span class="sav ${it.kind === 'overdue' ? 'danger' : ''}" ${it.hue != null ? `style="--h:${it.hue}"` : ''} aria-hidden="true">${it.initials || ico('shield')}</span>
+          <span class="stxt"><span class="t">${esc(it.title)}</span><span class="m ${it.kind === 'overdue' ? 'danger' : ''}">${esc(it.meta)}</span></span>
+          ${ico('chevR')}
+        </button>`).join('')}${overflow > 0 ? `<button class="srow more" data-scroll="attention"><span class="stxt"><span class="m">+${overflow} more</span></span>${ico('chevR')}</button>` : ''}</div>`
+        : `<div class="snone">${ico('check')} Nothing waiting on you</div>`}
+    </div>
+  </div>
+  <div class="strip-foot"><span>PDP objectives <b class="num">${pdpDone} of ${pdpTotal}</b> · ${pdpDue} reviews due in 30 days</span><a href="#/development/pdps" data-nav>View PDPs ${ico('arrow')}</a></div>`;
 }
 const pdpProgress = (s) => { const t = s.people.reduce((n, p) => n + p.pdp.objectives, 0); const c = s.people.reduce((n, p) => n + p.pdp.complete, 0); return t ? c / t : 0; };
 
@@ -743,7 +740,7 @@ function pageDashboard(s) {
       ${safeguardingBanner(s)}
       <div class="section-head" style="margin-top:22px"><h2>Your focus</h2><span class="sub">Ordered by what unblocks compliance first</span></div>
       ${focusCards(s)}
-      <div class="section-head" style="margin-top:26px"><h2>Your stats</h2><span class="sub">Live from the team's records</span></div>
+      <div class="section-head" style="margin-top:26px"><h2>Your team</h2><span class="sub">Live from the team's records</span></div>
       ${statsRow(s)}
     </section>
     <section class="section" id="attention" data-section>
