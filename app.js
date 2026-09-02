@@ -132,6 +132,7 @@ const state = {
   announceHidden: false,
   openGroup: null,
   trendRange: '12m',
+  openMenu: null,
 };
 
 /* Navigation model ----------------------------------------------- */
@@ -362,48 +363,70 @@ function statsRow(s) {
 }
 const pdpProgress = (s) => { const t = s.people.reduce((n, p) => n + p.pdp.objectives, 0); const c = s.people.reduce((n, p) => n + p.pdp.complete, 0); return t ? c / t : 0; };
 
+function attentionIntro(s) {
+  const good = s.gap === 0;
+  return `<div class="attn-intro">
+    <div class="fig num ${good ? 'good' : ''}">${good ? '100%' : pct(1 - s.compliance)}</div>
+    <div class="txt">
+      <strong>${good ? 'Team is fully compliant' : 'Gap to 100% compliance'}</strong>
+      <p>${good ? 'Everything below is early warning.' : `${plural(s.overdue.length, 'overdue supervision')} and ${s.review.length} awaiting your sign off. Closing these takes the team to 100%.`}</p>
+    </div>
+    <div class="pills">
+      ${s.overdue.length ? `<span class="pill crit">${s.overdue.length} overdue</span>` : ''}
+      ${s.review.length ? `<span class="pill info">${s.review.length} to sign off</span>` : ''}
+      ${s.decisions.length ? `<span class="pill warn">${plural(s.decisions.length, 'decision')}</span>` : ''}
+      ${s.atRisk.length ? `<span class="pill outline plain">${s.atRisk.length} due soon</span>` : ''}
+    </div>
+  </div>`;
+}
+
+/* Actions available for a person, by what their record needs. */
+function personActions(p) {
+  if (p.status === 'overdue') return [['chase', 'Send chase'], ['book', 'Book now'], ['note', 'Add note'], ['message', 'Message ' + p.name.split(' ')[0]]];
+  if (p.status === 'review') return [['signoff', 'Sign off record'], ['open', 'Open record'], ['note', 'Add note'], ['message', 'Message ' + p.name.split(' ')[0]]];
+  if (p.paused) return [['rejoin', 'Book return supervision'], ['extend', 'Extend leave'], ['note', 'Add note']];
+  if (['booked', 'drafting', 'not_booked'].includes(p.status)) return [['book', p.status === 'booked' ? 'Rebook' : 'Book supervision'], ['chase', 'Send reminder'], ['note', 'Add note'], ['message', 'Message ' + p.name.split(' ')[0]]];
+  return [['note', 'Add note'], ['message', 'Message ' + p.name.split(' ')[0]]];
+}
+
+function actionsMenu(p) {
+  const open = state.openMenu === p.id;
+  return `<div class="menu-wrap" data-menu-wrap>
+    <button class="btn sm secondary" data-person="${p.id}">View</button>
+    <button class="btn sm primary" data-menu="${p.id}" aria-haspopup="menu" aria-expanded="${open}">Actions ${ico('chevDown')}</button>
+    ${open ? `<div class="menu" role="menu">${personActions(p).map(([act, label], i) => `<button role="menuitem" class="${i === 0 ? 'lead' : ''}" data-act="${act}" data-id="${p.id}">${esc(label)}</button>`).join('')}</div>` : ''}
+  </div>`;
+}
+
 function attentionCard(s) {
   const rows = [];
   s.overdue.forEach((p) => rows.push(`<div class="attn-row">
     ${avatar(p)}
     <div class="who"><div class="name">${personBtn(p)} <span class="pill crit">${esc(p.label)}</span></div>
       <div class="meta"><span>${esc(p.type)}</span><span>Was due ${fmt(p.due, { day: 'numeric', month: 'short', year: 'numeric' })}</span><span class="${p.chases.length >= 3 ? 'crit' : ''}">${plural(p.chases.length, 'chase')}${p.chases.length ? `, last ${fmt(d(p.chases[p.chases.length - 1]))}${p.lastChaseRead === false ? ' (unread)' : ''}` : ''}</span></div></div>
-    <div class="acts"><button class="btn sm secondary" data-act="note" data-id="${p.id}">Add note</button><button class="btn sm secondary" data-act="chase" data-id="${p.id}">Send chase</button><button class="btn sm primary" data-act="book" data-id="${p.id}">Book now</button></div>
+    ${actionsMenu(p)}
   </div>`));
   s.review.forEach((p) => rows.push(`<div class="attn-row">
     ${avatar(p)}
     <div class="who"><div class="name">${personBtn(p)} <span class="pill info">Awaiting your sign off</span></div>
       <div class="meta"><span>${esc(p.type)}</span><span>Held ${fmt(d(p.current.held))}, submitted ${fmt(d(p.current.submitted))}</span><span class="warn">Blocked on you, not on ${p.name.split(' ')[0]}</span></div></div>
-    <div class="acts"><button class="btn sm secondary" data-person="${p.id}">Open record</button><button class="btn sm primary" data-act="signoff" data-id="${p.id}">Sign off</button></div>
+    ${actionsMenu(p)}
   </div>`));
   s.decisions.forEach((p) => rows.push(`<div class="attn-row">
     ${avatar(p)}
     <div class="who"><div class="name">${personBtn(p)} <span class="pill warn">Decision due ${fmt(d(p.paused.decisionDue))}</span></div>
       <div class="meta"><span>${esc(p.paused.reason)} since ${fmt(d(p.paused.since))}</span><span>Excluded from compliance while paused</span></div></div>
-    <div class="acts"><button class="btn sm secondary" data-act="extend" data-id="${p.id}">Extend leave</button><button class="btn sm primary" data-act="rejoin" data-id="${p.id}">Book return supervision</button></div>
+    ${actionsMenu(p)}
   </div>`));
   s.atRisk.forEach((p) => rows.push(`<div class="attn-row">
     ${avatar(p)}
     <div class="who"><div class="name">${personBtn(p)} <span class="pill ${p.tone}">${esc(p.label)}</span></div>
       <div class="meta"><span>${esc(p.type)}</span><span class="warn">Due in ${plural(p.daysToDue, 'day')} (${fmt(p.due)})</span><span>No action needed unless the booking slips</span></div></div>
-    <div class="acts"><button class="btn sm secondary" data-person="${p.id}">View</button></div>
+    ${actionsMenu(p)}
   </div>`));
-
-  const good = s.gap === 0;
   return `<div class="card">
-    <div class="attn-summary">
-      <span class="big num ${good ? 'good' : ''}">${good ? '100%' : pct(1 - s.compliance)}</span>
-      <div class="what"><strong>${good ? 'Team is fully compliant' : `Gap to 100% compliance`}</strong>
-        <span>${good ? 'Everything left here is early warning.' : `${plural(s.overdue.length, 'overdue supervision')}, ${s.review.length} awaiting your sign off. Closing these takes the team to 100%.`}</span></div>
-      <div class="breakdown">
-        ${s.overdue.length ? `<span class="pill crit">${s.overdue.length} overdue</span>` : ''}
-        ${s.review.length ? `<span class="pill info">${s.review.length} to sign off</span>` : ''}
-        ${s.decisions.length ? `<span class="pill warn">${plural(s.decisions.length, 'decision')}</span>` : ''}
-        ${s.atRisk.length ? `<span class="pill outline plain">${s.atRisk.length} due soon</span>` : ''}
-      </div>
-    </div>
     ${rows.length ? rows.join('') : `<div class="attn-empty"><strong>Nothing needs you right now</strong>Every active team member is in date and nothing is waiting for sign off.</div>`}
-    ${s.overdue.length > 1 ? `<div style="padding:12px 20px;border-top:1px solid var(--line)"><button class="btn sm primary" data-act="chase-all">Chase all overdue (${s.overdue.length})</button></div>` : ''}
+    ${s.overdue.length > 1 ? `<div style="padding:12px 24px;border-top:1px solid var(--line)"><button class="btn sm primary" data-act="chase-all">Chase all overdue (${s.overdue.length})</button></div>` : ''}
   </div>`;
 }
 
@@ -565,48 +588,58 @@ function trendSeries(s) {
 
 function trendCard(s) {
   const pts = trendSeries(s);
-  const W = 640, H = 200, L = 36, R = 44, T = 16, B = 28;
-  const lo = 0.5, hi = 1;
-  const x = (i) => L + (i * (W - L - R)) / Math.max(1, pts.length - 1);
-  const y = (v) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
-  // Monotone cubic through the points keeps the line smooth without overshooting.
-  const P = pts.map((p, i) => [x(i), y(p.v)]);
-  let dpath = `M${P[0][0].toFixed(1)},${P[0][1].toFixed(1)}`;
-  for (let i = 0; i < P.length - 1; i++) {
-    const [x0, y0] = P[i], [x1, y1] = P[i + 1];
-    const cx = ((x1 - x0) / 2).toFixed(1);
-    dpath += ` C${(x0 + +cx).toFixed(1)},${y0.toFixed(1)} ${(x1 - +cx).toFixed(1)},${y1.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`;
-  }
-  const area = `${dpath} L${P[P.length - 1][0].toFixed(1)},${y(lo)} L${P[0][0].toFixed(1)},${y(lo)} Z`;
   const target = 0.9;
   const last = pts[pts.length - 1], prev = pts[pts.length - 2] || last;
   const delta = Math.round((last.v - prev.v) * 100);
   const below = pts.filter((p) => p.v < target).length;
   const best = pts.reduce((m, p) => (p.v > m.v ? p : m), pts[0]);
   const seg = (k, l) => `<button class="${state.trendRange === k ? 'active' : ''}" data-range="${k}">${l}</button>`;
-  const step = (W - L - R) / Math.max(1, pts.length - 1);
   return `<div class="card trend">
     <div class="trend-head">
       <div><span class="k">Team compliance ${ico('chevR')}</span>
         <div class="big num">${pct(s.compliance)}<small>today</small><span class="delta ${delta > 0 ? 'up' : delta < 0 ? 'down' : ''}">${delta === 0 ? `Unchanged since ${prev.m}` : `${delta > 0 ? '↑' : '↓'} ${Math.abs(delta)} pts on ${prev.m}`}</span></div></div>
       <div class="seg">${seg('6m', '6m')}${seg('12m', '12m')}${seg('fy', s.q.fy.replace('FY ', 'FY'))}</div>
     </div>
-    <div class="trend-plot">
-      <div class="tip" id="trend-tip"></div>
-      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Team compliance by month">
-        <defs><linearGradient id="trend-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity="0.16"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
-        ${[0.5, 0.75, 1].map((g) => `<line class="grid-line" x1="${L}" x2="${W - R}" y1="${y(g)}" y2="${y(g)}"/><text x="${L - 8}" y="${y(g) + 4}" text-anchor="end">${Math.round(g * 100)}%</text>`).join('')}
-        <line class="target" x1="${L}" x2="${W - R}" y1="${y(target)}" y2="${y(target)}"/><text class="tg" x="${W - R + 6}" y="${y(target) + 4}">Target</text>
-        <path class="area" d="${area}"/><path class="line" d="${dpath}"/>
-        <line class="xh" id="trend-xh" x1="0" x2="0" y1="${T}" y2="${H - B + 6}"/>
-        ${pts.map((p, i) => `<circle class="pt ${p.live ? 'end' : ''}" data-i="${i}" cx="${x(i)}" cy="${y(p.v)}" r="4"/>`).join('')}
-        <text class="lbl" x="${x(pts.length - 1) + 8}" y="${y(last.v) + 4}">${pct(last.v)}</text>
-        ${pts.map((p, i) => `<text class="x" data-i="${i}" x="${x(i)}" y="${H - 6}" text-anchor="middle">${p.m}${p.m === 'Jan' ? ` ${String(p.y).slice(2)}` : ''}</text>`).join('')}
-        ${pts.map((p, i) => `<rect class="hit" data-i="${i}" x="${x(i) - step / 2}" y="0" width="${step}" height="${H}"/>`).join('')}
-      </svg>
-    </div>
+    <div class="trend-plot" data-trend><div class="tip" id="trend-tip"></div></div>
     <div class="trend-foot"><span class="key"><i></i>Share of active staff in date at month end</span><span class="key"><i class="t"></i>Target 90%</span><span>Best <b>${pct(best.v)}</b> in ${best.m}</span><span>Below target <b>${below}</b> of ${pts.length} months</span></div>
   </div>`;
+}
+
+/* The SVG is drawn with one unit per CSS pixel, so labels are real
+   12px text rather than scaling with the card. Redrawn on resize. */
+function drawTrend(plot) {
+  const s = derive();
+  const pts = trendSeries(s);
+  const W = Math.max(320, Math.round(plot.clientWidth - 48)), H = 220, L = 40, R = 52, T = 14, B = 30;
+  const lo = 0.5, hi = 1, target = 0.9;
+  const x = (i) => L + (i * (W - L - R)) / Math.max(1, pts.length - 1);
+  const y = (v) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+  const P = pts.map((p, i) => [x(i), y(p.v)]);
+  let dpath = `M${P[0][0].toFixed(1)},${P[0][1].toFixed(1)}`;
+  for (let i = 0; i < P.length - 1; i++) {
+    const [x0, y0] = P[i], [x1, y1] = P[i + 1]; const cx = (x1 - x0) / 2;
+    dpath += ` C${(x0 + cx).toFixed(1)},${y0.toFixed(1)} ${(x1 - cx).toFixed(1)},${y1.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`;
+  }
+  const area = `${dpath} L${P[P.length - 1][0].toFixed(1)},${y(lo)} L${P[0][0].toFixed(1)},${y(lo)} Z`;
+  const last = pts[pts.length - 1];
+  const step = (W - L - R) / Math.max(1, pts.length - 1);
+  const old = plot.querySelector('svg'); if (old) old.remove();
+  plot.insertAdjacentHTML('beforeend', `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Team compliance by month">
+    <defs><linearGradient id="trend-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity="0.16"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
+    ${[0.5, 0.75, 1].map((g) => `<line class="grid-line" x1="${L}" x2="${W - R}" y1="${y(g)}" y2="${y(g)}"/><text x="${L - 8}" y="${y(g) + 4}" text-anchor="end">${Math.round(g * 100)}%</text>`).join('')}
+    <line class="target" x1="${L}" x2="${W - R}" y1="${y(target)}" y2="${y(target)}"/><text class="tg" x="${W - R + 8}" y="${y(target) + 4}">Target</text>
+    <path class="area" d="${area}"/><path class="line" d="${dpath}"/>
+    <line class="xh" id="trend-xh" x1="0" x2="0" y1="${T}" y2="${H - B + 6}"/>
+    ${pts.map((p, i) => `<circle class="pt ${p.live ? 'end' : ''}" data-i="${i}" cx="${x(i)}" cy="${y(p.v)}" r="4"/>`).join('')}
+    <text class="lbl" x="${x(pts.length - 1) + 9}" y="${y(last.v) + 4}">${pct(last.v)}</text>
+    ${pts.map((p, i) => `<text class="x" data-i="${i}" x="${x(i)}" y="${H - 8}" text-anchor="middle">${p.m}${p.m === 'Jan' ? ` ${String(p.y).slice(2)}` : ''}</text>`).join('')}
+    ${pts.map((p, i) => `<rect class="hit" data-i="${i}" x="${x(i) - step / 2}" y="0" width="${step}" height="${H}"/>`).join('')}
+  </svg>`);
+}
+const trendObserver = new ResizeObserver((entries) => entries.forEach((en) => drawTrend(en.target)));
+function mountTrends() {
+  trendObserver.disconnect();
+  $$('[data-trend]').forEach((plot) => { drawTrend(plot); trendObserver.observe(plot); });
 }
 
 function trendHover(e) {
@@ -654,6 +687,7 @@ function pageDashboard(s) {
     </section>
     <section class="section" id="attention" data-section>
       <div class="section-head"><h2>Needs attention</h2><span class="sub">Everything stopping the team reaching 100%, plus early warnings</span></div>
+      ${attentionIntro(s)}
       ${attentionCard(s)}
     </section>
     <section class="section" id="cycle" data-section>
@@ -895,6 +929,7 @@ function toast(msg) {
 }
 
 function doAction(act, id) {
+  state.openMenu = null;
   const p = TEAM.find((x) => x.id === id);
   const s = derive();
   switch (act) {
@@ -904,7 +939,9 @@ function doAction(act, id) {
     case 'book': { const rec = p.history[p.history.length - 1]; const when = addDays(TODAY, 5); if (rec && !rec.signedOff) rec.booked = iso(when); else p.history.push({ type: 'Quarterly supervision', booked: iso(when) }); toast(`Booked ${p.name} for ${fmt(when, { weekday: 'short', day: 'numeric', month: 'short' })}. Still overdue until it is signed off.`); break; }
     case 'rejoin': { const when = d(p.paused.returns); delete p.paused; p.history.push({ type: 'Return to work supervision', booked: iso(when) }); toast(`${p.name} returns ${fmt(when)}. Return supervision booked and they are back in the compliance count.`); break; }
     case 'extend': { p.paused.returns = iso(addDays(d(p.paused.returns), 28)); p.paused.decisionDue = p.paused.returns; toast(`${p.name}'s leave extended to ${fmt(d(p.paused.returns))}.`); break; }
-    case 'note': toast(`Note added to ${p.name}'s record.`); return;
+    case 'note': toast(`Note added to ${p.name}'s record.`); render(); return;
+    case 'open': openPanel('person', p.id); return;
+    case 'message': { const m = MESSAGES.find((x) => x.person === p.id) || MESSAGES[0]; openPanel('thread', m.id); return; }
     case 'export': toast('Export queued. You will get it by email in a minute or two.'); return;
     case 'schedule-report': toast('Report scheduled monthly.'); return;
     case 'reassign': toast(`Reassign ${p.name}: pick a new supervisor (not in prototype).`); return;
@@ -932,6 +969,7 @@ function render() {
   $('#page-inner').innerHTML = page(s);
   renderPanel(s);
   setupScrollSpy();
+  mountTrends();
 }
 
 let spy = null;
@@ -974,7 +1012,8 @@ function openPanel(mode, arg = null) {
 }
 
 document.addEventListener('click', (e) => {
-  const t = e.target.closest('[data-group],[data-scroll],[data-go],[data-person],[data-act],[data-thread],[data-msg-filter],[data-cycle-filter],[data-sort],[data-cal],[data-message],[data-nav],#btn-menu,#btn-chat,#btn-notes,#panel-close,#panel-back,#scrim,#announce-prev,#announce-next,#announce-close,#btn-theme,#promo-close,[data-range]');
+  if (state.openMenu && !e.target.closest('[data-menu-wrap]')) { state.openMenu = null; render(); }
+  const t = e.target.closest('[data-group],[data-scroll],[data-go],[data-person],[data-act],[data-thread],[data-msg-filter],[data-cycle-filter],[data-sort],[data-cal],[data-message],[data-nav],#btn-menu,#btn-chat,#btn-notes,#panel-close,#panel-back,#scrim,#announce-prev,#announce-next,#announce-close,#btn-theme,#promo-close,[data-range],[data-menu]');
   if (!t) return;
   if (t.dataset.group) {
     const g = NAV.find((x) => x.id === t.dataset.group);
@@ -1005,6 +1044,7 @@ document.addEventListener('click', (e) => {
   if (t.id === 'announce-close') { state.announceHidden = true; render(); return; }
   if (t.id === 'btn-theme') { toggleTheme(); return; }
   if (t.id === 'promo-close') { $('#promo').hidden = true; return; }
+  if (t.dataset.menu) { state.openMenu = state.openMenu === t.dataset.menu ? null : t.dataset.menu; render(); return; }
   if (t.dataset.range) { state.trendRange = t.dataset.range; render(); return; }
 });
 
@@ -1018,6 +1058,7 @@ document.addEventListener('input', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && state.openMenu) { state.openMenu = null; render(); return; }
   if (e.key === 'Escape' && state.panelOpen) { state.panelOpen = false; render(); }
   if ((e.key === 'd' || e.key === 'D') && !e.metaKey && !e.ctrlKey && !/input|textarea/i.test(e.target.tagName)) toggleTheme();
   if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); $('#search-input').focus(); }

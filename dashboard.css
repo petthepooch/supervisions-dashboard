@@ -528,6 +528,38 @@ svg.i { width: 18px; height: 18px; flex: none; }
 .focus-card:hover .foot .cta svg { transform: translateX(3px); }
 .focus-card .pill { font-size: 12.5px; }
 
+/* Needs attention: intro sits above the card. */
+.attn-intro {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px 20px; align-items: center;
+  padding: 4px 4px 22px;
+}
+.attn-intro .fig { font-size: 40px; font-weight: 500; letter-spacing: -0.02em; line-height: 1; color: var(--ink); }
+.attn-intro .fig.good { color: var(--good); }
+.attn-intro .txt strong { display: block; font-size: 16px; font-weight: 600; }
+.attn-intro .txt p { color: var(--ink-2); font-size: 14px; margin-top: 2px; }
+.attn-intro .pills { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+@media (max-width: 900px) { .attn-intro { grid-template-columns: auto 1fr; } .attn-intro .pills { grid-column: 1 / -1; justify-content: flex-start; } }
+
+/* Actions menu */
+.menu-wrap { position: relative; display: flex; gap: 6px; flex: none; }
+.menu-wrap .btn svg { width: 14px; height: 14px; margin-right: -4px; }
+.menu {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 20;
+  min-width: 220px; padding: 6px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(15, 15, 17, 0.12), 0 2px 6px rgba(15, 15, 17, 0.06);
+  display: flex; flex-direction: column;
+  animation: menu-in 140ms var(--ease);
+}
+@keyframes menu-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.menu button {
+  text-align: left; padding: 9px 12px; border-radius: 8px;
+  font-size: 14px; font-weight: 400; color: var(--ink);
+}
+.menu button:hover { background: var(--surface-2); }
+.menu button.lead { font-weight: 500; }
+.menu button.lead + button { border-top: 1px solid var(--line); border-radius: 0 0 8px 8px; margin-top: 4px; padding-top: 12px; }
+
 /* Needs attention list */
 .attn-summary {
   display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
@@ -659,8 +691,8 @@ tr.is-me td { background: var(--accent-soft); }
 .trend-head .big small { font-size: 13.5px; font-weight: 400; color: var(--ink-2); letter-spacing: 0; }
 .trend-head .delta { font-size: 13.5px; font-weight: 500; }
 .trend-head .delta.up { color: var(--good); } .trend-head .delta.down { color: var(--crit); }
-.trend-plot { position: relative; padding: 8px 24px 6px; }
-.trend svg { display: block; width: 100%; height: auto; overflow: visible; }
+.trend-plot { position: relative; padding: 8px 24px 6px; min-height: 236px; }
+.trend svg { display: block; overflow: visible; }
 .trend .grid-line { stroke: var(--line); stroke-width: 1; }
 .trend .target { stroke: var(--line-strong); stroke-width: 1; }
 .trend .area { fill: url(#trend-fill); }
@@ -671,8 +703,8 @@ tr.is-me td { background: var(--accent-soft); }
 .trend .xh { stroke: var(--line-strong); stroke-width: 1; opacity: 0; }
 .trend .xh.on { opacity: 1; }
 .trend .hit { fill: transparent; cursor: crosshair; }
-.trend text { font-family: var(--font); font-size: 11.5px; fill: var(--ink-3); }
-.trend text.lbl { font-weight: 500; fill: var(--ink); font-size: 12px; }
+.trend text { font-family: var(--font); font-size: 12.5px; fill: var(--ink-3); }
+.trend text.lbl { font-weight: 500; fill: var(--ink); font-size: 13px; }
 .trend text.tg { fill: var(--ink-3); }
 .trend text.x.on { fill: var(--ink); font-weight: 500; }
 .tip {
