@@ -691,7 +691,7 @@ function drawTrend(plot) {
   const step = (W - L - R) / Math.max(1, pts.length - 1);
   const old = plot.querySelector('svg'); if (old) old.remove();
   plot.insertAdjacentHTML('beforeend', `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Team compliance by month">
-    <defs><linearGradient id="trend-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity="0.16"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
+    <defs><linearGradient id="trend-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--bar)" stop-opacity="0.16"/><stop offset="1" stop-color="var(--bar)" stop-opacity="0"/></linearGradient></defs>
     ${[0.5, 0.75, 1].map((g) => `<line class="grid-line" x1="${L}" x2="${W - R}" y1="${y(g)}" y2="${y(g)}"/><text x="${L - 8}" y="${y(g) + 4}" text-anchor="end">${Math.round(g * 100)}%</text>`).join('')}
     <line class="target" x1="${L}" x2="${W - R}" y1="${y(target)}" y2="${y(target)}"/><text class="tg" x="${W - R + 8}" y="${y(target) + 4}">Target</text>
     <path class="area" d="${area}"/><path class="line" d="${dpath}"/>
