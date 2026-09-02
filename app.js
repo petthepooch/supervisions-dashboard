@@ -418,11 +418,11 @@ const pdpProgress = (s) => { const t = s.people.reduce((n, p) => n + p.pdp.objec
 function attentionIntro(s) {
   const good = s.gap === 0;
   const early = [s.decisions.length ? plural(s.decisions.length, 'decision') : '', s.atRisk.length ? `${s.atRisk.length} due soon` : ''].filter(Boolean).join(' and ');
-  return `<div class="attn-intro">
-    <div class="txt">
-      <strong>${good ? 'Team is fully compliant' : `${s.gap === 1 ? 'One record is' : `${['Two', 'Three', 'Four'][s.gap - 2] || s.gap} records are`} holding compliance below 100%`}</strong>
-      <p>${good ? 'Nothing is overdue or waiting on you.' : [s.overdue.length ? plural(s.overdue.length, 'overdue supervision') : '', s.review.length ? `${s.review.length} awaiting your sign off` : ''].filter(Boolean).join(' and ') + '. Closing these takes the team to 100%.'}${early ? ` ${early.charAt(0).toUpperCase() + early.slice(1)} ${(s.decisions.length + s.atRisk.length) === 1 ? 'is an' : 'are'} early warning${(s.decisions.length + s.atRisk.length) === 1 ? '' : 's'}.` : ''}</p>
-    </div>
+  const title = good ? 'Team is fully compliant' : `${s.gap === 1 ? 'One record is' : `${['Two', 'Three', 'Four'][s.gap - 2] || s.gap} records are`} holding compliance below 100%`;
+  const sub = (good ? 'Nothing is overdue or waiting on you.' : [s.overdue.length ? plural(s.overdue.length, 'overdue supervision') : '', s.review.length ? `${s.review.length} awaiting your sign off` : ''].filter(Boolean).join(' and ') + '. Closing these takes the team to 100%.') + (early ? ` ${early.charAt(0).toUpperCase() + early.slice(1)} ${(s.decisions.length + s.atRisk.length) === 1 ? 'is an' : 'are'} early warning${(s.decisions.length + s.atRisk.length) === 1 ? '' : 's'}.` : '');
+  return `<div class="card-head">
+    <div><h3>${title}</h3><div class="sub">${sub}</div></div>
+    ${s.overdue.length ? `<button class="btn sm secondary" data-act="${s.overdue.length > 1 ? 'chase-all' : 'chase'}" data-id="${s.overdue[0].id}">${ico('mail')} Chase ${s.overdue.length > 1 ? `all overdue (${s.overdue.length})` : s.overdue[0].name.split(' ')[0]}</button>` : ''}
   </div>`;
 }
 
@@ -436,7 +436,7 @@ function attentionFilters(s) {
     { key: 'soon', label: 'Due soon', count: s.atRisk.length, tone: 'muted' },
   ];
   const shown = state.attnFilter === 'all' ? total : (items.find((i) => i.key === state.attnFilter) || {}).count || 0;
-  return `<div class="toolbar bare">${segFilters(items, state.attnFilter, 'attn-filter')}<span class="toolbar-note">Showing ${shown} of ${total}</span></div>`;
+  return `<div class="toolbar">${segFilters(items, state.attnFilter, 'attn-filter')}<span class="toolbar-note">Showing ${shown} of ${total}</span></div>`;
 }
 
 /* Actions available for a person, by what their record needs. */
@@ -485,8 +485,9 @@ function attentionCard(s) {
   </div>` }));
   const shown = state.attnFilter === 'all' ? rows : rows.filter((r) => r.k === state.attnFilter);
   return `<div class="card">
+    ${attentionIntro(s)}
+    ${attentionFilters(s)}
     ${shown.length ? shown.map((r) => r.html).join('') : rows.length ? `<div class="attn-empty"><strong>Nothing in this filter</strong>Choose another filter or All.</div>` : `<div class="attn-empty"><strong>Nothing needs you right now</strong>Every active team member is in date and nothing is waiting for sign off.</div>`}
-    ${s.overdue.length > 1 ? `<div style="padding:12px 24px;border-top:1px solid var(--line)"><button class="btn sm primary" data-act="chase-all">Chase all overdue (${s.overdue.length})</button></div>` : ''}
   </div>`;
 }
 
@@ -758,8 +759,6 @@ function pageDashboard(s) {
     </section>
     <section class="section" id="attention" data-section>
       <div class="section-head"><h2>Needs attention</h2><span class="sub">Everything stopping the team reaching 100%, plus early warnings</span></div>
-      ${attentionIntro(s)}
-      ${attentionFilters(s)}
       ${attentionCard(s)}
     </section>
     <section class="section" id="cycle" data-section>

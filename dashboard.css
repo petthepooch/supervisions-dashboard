@@ -416,7 +416,7 @@ svg.i { width: 18px; height: 18px; flex: none; }
   padding: 18px 24px; border-bottom: 1px solid var(--line);
 }
 .card-head h3 { font-size: 17px; font-weight: 600; }
-.card-head .sub { color: var(--ink-3); font-size: 13px; margin-top: 2px; }
+.card-head .sub { color: var(--ink-3); font-size: 13px; margin-top: 2px; max-width: 80ch; }
 .card-body { padding: 24px; }
 
 /* Icon tile, as on the reference cards. */
