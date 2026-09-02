@@ -750,9 +750,9 @@ function pageDashboard(s) {
     ${sectionTabs(tabs)}
     <section class="section" id="overview" data-section>
       ${safeguardingBanner(s)}
-      <div class="section-head" style="margin-top:22px"><h2>Your focus</h2><span class="sub">Ordered by what unblocks compliance first</span></div>
+      <div class="section-head" style="margin-top:40px"><h2>Your focus</h2><span class="sub">Ordered by what unblocks compliance first</span></div>
       ${focusCards(s)}
-      <div class="section-head" style="margin-top:26px"><h2>Your team</h2><span class="sub">Live from the team's records</span></div>
+      <div class="section-head" style="margin-top:64px"><h2>Your team</h2><span class="sub">Live from the team's records</span></div>
       ${statsRow(s)}
     </section>
     <section class="section" id="attention" data-section>

@@ -434,27 +434,28 @@ svg.i { width: 18px; height: 18px; flex: none; }
 .tile.round.crit { background: var(--crit-soft); color: var(--crit); }
 .tile.round.good { background: var(--good-soft); color: var(--good); }
 
-/* Tags: surface fill, hairline border in the status hue, dot, ink text. */
+/* Tags: tinted fill in the status hue with a tone-matched inner ring
+   and tone-coloured text. Neutral tags stay on the surface. */
 .pill {
   --tone: var(--ink-3);
-  display: inline-flex; align-items: center; gap: 7px;
-  height: 24px; padding: 0 9px 0 8px;
-  border-radius: 7px;
+  --tone-text: var(--ink-2);
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 24px; padding: 0 9px;
+  border-radius: 6px;
   font-size: 12.5px; font-weight: 500; letter-spacing: 0.01em;
-  background: var(--surface); color: var(--ink);
-  border: 1px solid color-mix(in srgb, var(--tone) 38%, var(--line));
+  background: color-mix(in srgb, var(--tone) 11%, var(--surface));
+  color: var(--tone-text);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 22%, transparent);
   white-space: nowrap;
 }
-.pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--tone); box-shadow: 0 0 0 2px color-mix(in srgb, var(--tone) 18%, transparent); }
-.pill.plain::before { display: none; }
-.pill.plain { padding-left: 9px; }
-.pill.good { --tone: var(--good); }
-.pill.warn { --tone: var(--warn); }
-.pill.crit { --tone: var(--crit); color: var(--crit); }
-.pill.info { --tone: var(--info); }
-.pill.accent { --tone: var(--accent); }
-.pill.outline { --tone: var(--ink-3); }
-.pill svg { width: 13px; height: 13px; color: var(--tone); }
+.pill::before { display: none; }
+.pill.good { --tone: var(--good); --tone-text: var(--good); }
+.pill.warn { --tone: var(--warn); --tone-text: var(--warn); }
+.pill.crit { --tone: var(--crit); --tone-text: var(--crit); }
+.pill.info { --tone: var(--info); --tone-text: var(--info); }
+.pill.accent { --tone: var(--accent); --tone-text: var(--accent-ink); }
+.pill.outline, .pill.plain:not(.good):not(.warn):not(.crit):not(.info):not(.accent) { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--ink-2); }
+.pill svg { width: 13px; height: 13px; color: var(--tone-text); }
 
 /* Safeguarding banner */
 .alert {
@@ -562,7 +563,7 @@ svg.i { width: 18px; height: 18px; flex: none; }
 .focus-card .pill { font-size: 12px; height: 22px; flex: none; }
 .pill.has-ico::before { display: none; }
 .pill.has-ico svg { width: 13px; height: 13px; flex: none; }
-.pill.has-ico { padding-left: 8px; }
+.pill.has-ico { padding-left: 7px; }
 .tile.tone { width: 36px; height: 36px; border: 0; border-radius: 10px; flex: none; }
 .tile.tone svg { width: 18px; height: 18px; }
 .focus-card.t-crit .tile.tone { background: var(--crit-soft); color: var(--crit); }
