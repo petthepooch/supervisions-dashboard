@@ -528,17 +528,32 @@ svg.i { width: 18px; height: 18px; flex: none; }
 .focus-card:hover .foot .cta svg { transform: translateX(3px); }
 .focus-card .pill { font-size: 12.5px; }
 
-/* Needs attention: intro sits above the card. */
+/* Needs attention: intro sits above the card, filters attach to it. */
 .attn-intro {
-  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px 20px; align-items: center;
-  padding: 4px 4px 22px;
+  display: flex; align-items: center; gap: 24px;
+  padding: 2px 4px 18px;
 }
-.attn-intro .fig { font-size: 40px; font-weight: 500; letter-spacing: -0.02em; line-height: 1; color: var(--ink); }
-.attn-intro .fig.good { color: var(--good); }
+.fig-block {
+  display: flex; flex-direction: column; align-items: flex-start; flex: none;
+  padding-right: 24px; border-right: 1px solid var(--line);
+}
+.fig-block .fig { font-size: 40px; font-weight: 500; letter-spacing: -0.02em; line-height: 1; color: var(--ink); }
+.fig-block .fig-l { font-size: 12.5px; color: var(--ink-3); margin-top: 6px; }
+.fig-block.good .fig { color: var(--good); }
 .attn-intro .txt strong { display: block; font-size: 16px; font-weight: 600; }
-.attn-intro .txt p { color: var(--ink-2); font-size: 14px; margin-top: 2px; }
-.attn-intro .pills { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-@media (max-width: 900px) { .attn-intro { grid-template-columns: auto 1fr; } .attn-intro .pills { grid-column: 1 / -1; justify-content: flex-start; } }
+.attn-intro .txt p { color: var(--ink-2); font-size: 14px; margin-top: 2px; max-width: 78ch; }
+
+/* Toolbar: filters left, search or note right. */
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 24px; border-bottom: 1px solid var(--line); }
+.toolbar.bare { padding: 0 0 12px; border-bottom: 0; }
+.toolbar-note { font-size: 13px; color: var(--ink-3); }
+.filters-seg button { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; }
+.filters-seg button[disabled] { opacity: 0.45; cursor: default; }
+.filters-seg .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--line-strong); display: inline-block; }
+.filters-seg .dot.crit { background: var(--crit); } .filters-seg .dot.warn { background: var(--warn); }
+.filters-seg .dot.info { background: var(--info); } .filters-seg .dot.good { background: var(--good); } .filters-seg .dot.muted { background: var(--line-strong); }
+.filters-seg .n { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.filters-seg button.active .n { color: var(--ink-2); }
 
 /* Actions menu */
 .menu-wrap { position: relative; display: flex; gap: 6px; flex: none; }
@@ -608,7 +623,7 @@ svg.i { width: 18px; height: 18px; flex: none; }
 .chip .n { opacity: 0.65; font-size: 12px; font-variant-numeric: tabular-nums; }
 .mini-search {
   display: flex; align-items: center; gap: 8px;
-  height: 32px; padding: 0 12px; width: 180px; margin-left: 6px;
+  height: 34px; padding: 0 12px; width: 220px;
   border: 1px solid var(--line); border-radius: var(--pill); background: var(--surface);
   color: var(--ink-3);
 }

@@ -133,6 +133,7 @@ const state = {
   openGroup: null,
   trendRange: '12m',
   openMenu: null,
+  attnFilter: 'all',
 };
 
 /* Navigation model ----------------------------------------------- */
@@ -248,6 +249,12 @@ function renderTopbar(s) {
 const avatar = (p, cls = '') => `<span class="avatar ${cls}" style="--h:${p.hue}">${p.initials || initials(p.name)}</span>`;
 const personBtn = (p, extra = '') => `<button data-person="${p.id}">${esc(p.name)}</button>${extra}`;
 const statusPill = (p) => `<span class="pill ${p.tone}">${esc(p.label)}</span>`;
+
+/* Segmented filter: dot (status colour), label, count. `attr` is the
+   data attribute the click handler listens for. */
+function segFilters(items, active, attr) {
+  return `<div class="seg filters-seg" role="tablist">${items.map((it) => `<button role="tab" class="${active === it.key ? 'active' : ''}" data-${attr}="${it.key}" ${it.count === 0 && it.key !== 'all' ? 'disabled' : ''}>${it.tone ? `<i class="dot ${it.tone}"></i>` : ''}${it.label}<span class="n">${it.count}</span></button>`).join('')}</div>`;
+}
 
 function sectionTabs(tabs) {
   return `<nav class="section-tabs" aria-label="Sections"><ul>
@@ -365,19 +372,27 @@ const pdpProgress = (s) => { const t = s.people.reduce((n, p) => n + p.pdp.objec
 
 function attentionIntro(s) {
   const good = s.gap === 0;
+  const early = [s.decisions.length ? plural(s.decisions.length, 'decision') : '', s.atRisk.length ? `${s.atRisk.length} due soon` : ''].filter(Boolean).join(' and ');
   return `<div class="attn-intro">
-    <div class="fig num ${good ? 'good' : ''}">${good ? '100%' : pct(1 - s.compliance)}</div>
+    <div class="fig-block ${good ? 'good' : ''}"><span class="fig num">${good ? '100%' : pct(1 - s.compliance)}</span><span class="fig-l">${good ? 'compliant' : 'gap to 100%'}</span></div>
     <div class="txt">
-      <strong>${good ? 'Team is fully compliant' : 'Gap to 100% compliance'}</strong>
-      <p>${good ? 'Everything below is early warning.' : `${plural(s.overdue.length, 'overdue supervision')} and ${s.review.length} awaiting your sign off. Closing these takes the team to 100%.`}</p>
-    </div>
-    <div class="pills">
-      ${s.overdue.length ? `<span class="pill crit">${s.overdue.length} overdue</span>` : ''}
-      ${s.review.length ? `<span class="pill info">${s.review.length} to sign off</span>` : ''}
-      ${s.decisions.length ? `<span class="pill warn">${plural(s.decisions.length, 'decision')}</span>` : ''}
-      ${s.atRisk.length ? `<span class="pill outline plain">${s.atRisk.length} due soon</span>` : ''}
+      <strong>${good ? 'Team is fully compliant' : `${s.gap === 1 ? 'One record is' : `${['Two', 'Three', 'Four'][s.gap - 2] || s.gap} records are`} holding compliance below 100%`}</strong>
+      <p>${good ? 'Nothing is overdue or waiting on you.' : [s.overdue.length ? plural(s.overdue.length, 'overdue supervision') : '', s.review.length ? `${s.review.length} awaiting your sign off` : ''].filter(Boolean).join(' and ') + '. Closing these takes the team to 100%.'}${early ? ` ${early.charAt(0).toUpperCase() + early.slice(1)} ${(s.decisions.length + s.atRisk.length) === 1 ? 'is an' : 'are'} early warning${(s.decisions.length + s.atRisk.length) === 1 ? '' : 's'}.` : ''}</p>
     </div>
   </div>`;
+}
+
+function attentionFilters(s) {
+  const total = s.overdue.length + s.review.length + s.decisions.length + s.atRisk.length;
+  const items = [
+    { key: 'all', label: 'All', count: total },
+    { key: 'overdue', label: 'Overdue', count: s.overdue.length, tone: 'crit' },
+    { key: 'review', label: 'To sign off', count: s.review.length, tone: 'info' },
+    { key: 'decision', label: 'Decisions', count: s.decisions.length, tone: 'warn' },
+    { key: 'soon', label: 'Due soon', count: s.atRisk.length, tone: 'muted' },
+  ];
+  const shown = state.attnFilter === 'all' ? total : (items.find((i) => i.key === state.attnFilter) || {}).count || 0;
+  return `<div class="toolbar bare">${segFilters(items, state.attnFilter, 'attn-filter')}<span class="toolbar-note">Showing ${shown} of ${total}</span></div>`;
 }
 
 /* Actions available for a person, by what their record needs. */
@@ -400,32 +415,33 @@ function actionsMenu(p) {
 
 function attentionCard(s) {
   const rows = [];
-  s.overdue.forEach((p) => rows.push(`<div class="attn-row">
+  s.overdue.forEach((p) => rows.push({ k: 'overdue', html: `<div class="attn-row">
     ${avatar(p)}
     <div class="who"><div class="name">${personBtn(p)} <span class="pill crit">${esc(p.label)}</span></div>
       <div class="meta"><span>${esc(p.type)}</span><span>Was due ${fmt(p.due, { day: 'numeric', month: 'short', year: 'numeric' })}</span><span class="${p.chases.length >= 3 ? 'crit' : ''}">${plural(p.chases.length, 'chase')}${p.chases.length ? `, last ${fmt(d(p.chases[p.chases.length - 1]))}${p.lastChaseRead === false ? ' (unread)' : ''}` : ''}</span></div></div>
     ${actionsMenu(p)}
-  </div>`));
-  s.review.forEach((p) => rows.push(`<div class="attn-row">
+  </div>` }));
+  s.review.forEach((p) => rows.push({ k: 'review', html: `<div class="attn-row">
     ${avatar(p)}
     <div class="who"><div class="name">${personBtn(p)} <span class="pill info">Awaiting your sign off</span></div>
       <div class="meta"><span>${esc(p.type)}</span><span>Held ${fmt(d(p.current.held))}, submitted ${fmt(d(p.current.submitted))}</span><span class="warn">Blocked on you, not on ${p.name.split(' ')[0]}</span></div></div>
     ${actionsMenu(p)}
-  </div>`));
-  s.decisions.forEach((p) => rows.push(`<div class="attn-row">
+  </div>` }));
+  s.decisions.forEach((p) => rows.push({ k: 'decision', html: `<div class="attn-row">
     ${avatar(p)}
     <div class="who"><div class="name">${personBtn(p)} <span class="pill warn">Decision due ${fmt(d(p.paused.decisionDue))}</span></div>
       <div class="meta"><span>${esc(p.paused.reason)} since ${fmt(d(p.paused.since))}</span><span>Excluded from compliance while paused</span></div></div>
     ${actionsMenu(p)}
-  </div>`));
-  s.atRisk.forEach((p) => rows.push(`<div class="attn-row">
+  </div>` }));
+  s.atRisk.forEach((p) => rows.push({ k: 'soon', html: `<div class="attn-row">
     ${avatar(p)}
     <div class="who"><div class="name">${personBtn(p)} <span class="pill ${p.tone}">${esc(p.label)}</span></div>
       <div class="meta"><span>${esc(p.type)}</span><span class="warn">Due in ${plural(p.daysToDue, 'day')} (${fmt(p.due)})</span><span>No action needed unless the booking slips</span></div></div>
     ${actionsMenu(p)}
-  </div>`));
+  </div>` }));
+  const shown = state.attnFilter === 'all' ? rows : rows.filter((r) => r.k === state.attnFilter);
   return `<div class="card">
-    ${rows.length ? rows.join('') : `<div class="attn-empty"><strong>Nothing needs you right now</strong>Every active team member is in date and nothing is waiting for sign off.</div>`}
+    ${shown.length ? shown.map((r) => r.html).join('') : rows.length ? `<div class="attn-empty"><strong>Nothing in this filter</strong>Choose another filter or All.</div>` : `<div class="attn-empty"><strong>Nothing needs you right now</strong>Every active team member is in date and nothing is waiting for sign off.</div>`}
     ${s.overdue.length > 1 ? `<div style="padding:12px 24px;border-top:1px solid var(--line)"><button class="btn sm primary" data-act="chase-all">Chase all overdue (${s.overdue.length})</button></div>` : ''}
   </div>`;
 }
@@ -472,15 +488,20 @@ function cycleCard(s, { compact = false } = {}) {
   const order = { overdue: 0, review: 1, not_booked: 2, drafting: 3, booked: 4, complete: 5, paused: 6 };
   people = [...people].sort((a, b) => order[a.status] - order[b.status] || a.due - b.due);
 
-  const chip = (k, l) => `<button class="chip ${state.cycleFilter === k ? 'active' : ''}" data-cycle-filter="${k}">${l} <span class="n">${counts[k]}</span></button>`;
+  const items = [
+    { key: 'all', label: 'All', count: counts.all },
+    { key: 'action', label: 'Needs action', count: counts.action, tone: 'warn' },
+    { key: 'overdue', label: 'Overdue', count: counts.overdue, tone: 'crit' },
+    { key: 'complete', label: 'Signed off', count: counts.complete, tone: 'good' },
+  ];
   return `<div class="card">
     <div class="card-head">
       <div><h3>Supervision cycle</h3><div class="sub">${s.q.fy}. One supervision per quarter and no more than 12 weeks apart.</div></div>
-      <div class="filters">
-        ${chip('all', 'All')}${chip('action', 'Needs action')}${chip('overdue', 'Overdue')}${chip('complete', 'Signed off')}
-        <label class="mini-search">${ico('search')}<input type="search" placeholder="Search team" value="${esc(state.cycleSearch)}" data-cycle-search aria-label="Search team"></label>
-        <button class="btn sm secondary" data-act="export">${ico('download')} Export</button>
-      </div>
+      <button class="btn sm secondary" data-act="export">${ico('download')} Export</button>
+    </div>
+    <div class="toolbar">
+      ${segFilters(items, state.cycleFilter, 'cycle-filter')}
+      <label class="mini-search">${ico('search')}<input type="search" placeholder="Search team" value="${esc(state.cycleSearch)}" data-cycle-search aria-label="Search team"></label>
     </div>
     <div class="table-wrap"><table class="tbl">
       <thead><tr><th>Team member</th>${qs.map((q) => `<th class="${q.current ? 'here' : ''}">${q.label}${q.current ? '<small>You are here</small>' : ''}</th>`).join('')}${compact ? '' : '<th>Next due</th>'}</tr></thead>
@@ -688,6 +709,7 @@ function pageDashboard(s) {
     <section class="section" id="attention" data-section>
       <div class="section-head"><h2>Needs attention</h2><span class="sub">Everything stopping the team reaching 100%, plus early warnings</span></div>
       ${attentionIntro(s)}
+      ${attentionFilters(s)}
       ${attentionCard(s)}
     </section>
     <section class="section" id="cycle" data-section>
@@ -1013,7 +1035,7 @@ function openPanel(mode, arg = null) {
 
 document.addEventListener('click', (e) => {
   if (state.openMenu && !e.target.closest('[data-menu-wrap]')) { state.openMenu = null; render(); }
-  const t = e.target.closest('[data-group],[data-scroll],[data-go],[data-person],[data-act],[data-thread],[data-msg-filter],[data-cycle-filter],[data-sort],[data-cal],[data-message],[data-nav],#btn-menu,#btn-chat,#btn-notes,#panel-close,#panel-back,#scrim,#announce-prev,#announce-next,#announce-close,#btn-theme,#promo-close,[data-range],[data-menu]');
+  const t = e.target.closest('[data-group],[data-scroll],[data-go],[data-person],[data-act],[data-thread],[data-msg-filter],[data-cycle-filter],[data-sort],[data-cal],[data-message],[data-nav],#btn-menu,#btn-chat,#btn-notes,#panel-close,#panel-back,#scrim,#announce-prev,#announce-next,#announce-close,#btn-theme,#promo-close,[data-range],[data-menu],[data-attn-filter]');
   if (!t) return;
   if (t.dataset.group) {
     const g = NAV.find((x) => x.id === t.dataset.group);
@@ -1030,6 +1052,7 @@ document.addEventListener('click', (e) => {
   if (t.dataset.message) { const m = MESSAGES.find((x) => x.person === t.dataset.message) || MESSAGES[0]; openPanel('thread', m.id); return; }
   if (t.dataset.thread) { const m = MESSAGES.find((x) => x.id === t.dataset.thread); m.unread = false; openPanel('thread', m.id); return; }
   if (t.dataset.msgFilter) { state.msgFilter = t.dataset.msgFilter; render(); return; }
+  if (t.dataset.attnFilter) { state.attnFilter = t.dataset.attnFilter; render(); return; }
   if (t.dataset.cycleFilter) { state.cycleFilter = t.dataset.cycleFilter; render(); return; }
   if (t.dataset.sort) { const k = t.dataset.sort; state.leagueSort = state.leagueSort.key === k ? { key: k, dir: state.leagueSort.dir === 'asc' ? 'desc' : 'asc' } : { key: k, dir: k === 'name' || k === 'site' || k === 'rank' ? 'asc' : 'desc' }; render(); return; }
   if (t.dataset.cal) { state.calMonth = t.dataset.cal === 'today' ? new Date(TODAY.getFullYear(), TODAY.getMonth(), 1) : new Date(state.calMonth.getFullYear(), state.calMonth.getMonth() + Number(t.dataset.cal), 1); render(); return; }
