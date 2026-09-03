@@ -269,11 +269,9 @@ function renderNav(s) {
 
 function renderCrumb() {
   const crumb = $('#crumb');
-  crumb.hidden = !state.navRail;
-  if (state.navRail) {
-    const ar = areaForRoute(state.route); const p = pageLabel(state.route);
-    crumb.innerHTML = ar ? `<button data-crumb-area="${ar.id}">${ar.label}</button><span class="sep">/</span><span>${p ? p.label : ''}</span>` : `<span>Home</span>`;
-  }
+  crumb.hidden = false;
+  const ar = areaForRoute(state.route); const p = pageLabel(state.route);
+  crumb.innerHTML = ar ? `<button data-crumb-area="${ar.id}">${ar.label}</button><span class="sep">/</span><span>${p ? p.label : ''}</span>` : `<span>Home</span>`;
 }
 
 function renderRole() {
@@ -1232,7 +1230,7 @@ document.addEventListener('click', (e) => {
     state.navArea = null; go(dest); return;
   }
   if (t.dataset.pin) { e.preventDefault(); const r = t.dataset.pin; state.pins = state.pins.includes(r) ? state.pins.filter((x) => x !== r) : [...state.pins, r]; saveStore(); render(); return; }
-  if (t.dataset.crumbArea) { setNavOpen(true); state.navArea = t.dataset.crumbArea; state.navAnim = 'enter-forward'; render(); return; }
+  if (t.dataset.crumbArea) { if (state.navRail) setNavOpen(true); state.navArea = t.dataset.crumbArea; state.navAnim = 'enter-forward'; render(); return; }
   if (t.id === 'area-switch') { state.areaMenu = !state.areaMenu; render(); return; }
   if (t.id === 'nav-scrim') { setNavOpen(false); return; }
   if (t.id === 'search-open') { openPalette(); return; }
