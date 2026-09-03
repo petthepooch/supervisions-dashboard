@@ -302,7 +302,14 @@ svg.i { width: 18px; height: 18px; flex: none; }
   display: flex; align-items: center; gap: 4px;
   padding: 0 24px 0 var(--page-pad);
 }
-.topbar .search { flex: 1; max-width: 400px; height: 34px; font-size: 14px; }
+.topbar { container-type: inline-size; }
+.topbar .search { flex: 1 1 160px; min-width: 0; max-width: 400px; height: 34px; font-size: 14px; overflow: hidden; }
+.topbar .search .ph { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar .search .kbd { flex: none; }
+.crumb { min-width: 0; overflow: hidden; }
+.crumb > span:last-child { overflow: hidden; text-overflow: ellipsis; }
+@container (max-width: 760px) { .topbar .search .kbd { display: none; } }
+@container (max-width: 640px) { .topbar .crumb { display: none; } }
 .topbar .spacer { flex: 1; }
 .icon-btn {
   width: 36px; height: 36px; flex: none;
