@@ -149,6 +149,13 @@ const state = {
   navArea: 'supervisions',
   role: 'rm',
   roleMenu: false,
+  areaMenu: false,
+  pins: [],
+  lastRoute: {},
+  recent: [],
+  palette: false,
+  paletteQuery: '',
+  paletteIndex: 0,
   navAnim: null,
   trendRange: '12m',
   openMenu: null,
@@ -176,7 +183,21 @@ const AREAS = [
       { label: 'Report', items: [['Compliance', '/reports/compliance'], ['League table', '/reports/league'], ['Reporting suite', '/reports/suite']] },
     ] },
 ];
-const areaForRoute = (route) => AREAS.find((ar) => ar.sections.some((sec) => sec.items.some(([, r]) => route === r || route.startsWith(r + '/'))));
+/* What a learner sees: the same features, each reduced to "my" pages. */
+const LEARNER_AREAS = [
+  { id: 'learning', label: 'Learning', icon: 'book', home: '/my/learning', blurb: 'Your courses and certificates', sections: [{ label: 'Learning', items: [['My learning', '/my/learning'], ['Certificates', '/my/certificates']] }] },
+  { id: 'competencies', label: 'Competencies', icon: 'award', home: '/my/competencies', blurb: 'Your competencies and evidence', sections: [{ label: 'Competencies', items: [['My competencies', '/my/competencies'], ['Evidence', '/my/evidence']] }] },
+  { id: 'events', label: 'Events', icon: 'calendar', home: '/my/events', blurb: 'Training you are booked on', sections: [{ label: 'Events', items: [['My events', '/my/events']] }] },
+  { id: 'supervisions', label: 'Supervisions', icon: 'clipboard', home: '/my/supervisions', blurb: 'Your supervisions and PDP', sections: [{ label: 'Supervisions', items: [['My supervisions', '/my/supervisions'], ['My PDP', '/my/pdp']] }] },
+];
+const areas = () => (state.role === 'lr' ? LEARNER_AREAS : AREAS);
+
+/* Remembered between visits: sidebar state, pins, last page per feature, recent pages. */
+const STORE = 'myako-proto';
+function loadStore() { try { return JSON.parse(localStorage.getItem(STORE) || '{}'); } catch { return {}; } }
+function saveStore() { try { localStorage.setItem(STORE, JSON.stringify({ navRail: state.navRail, pins: state.pins, lastRoute: state.lastRoute, recent: state.recent })); } catch {} }
+
+const areaForRoute = (route) => areas().find((ar) => ar.sections.some((sec) => sec.items.some(([, r]) => route === r || route.startsWith(r + '/'))));
 
 const ICONS = {
   grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
@@ -209,29 +230,50 @@ const ICONS = {
   book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 016.5 3H20v15H6.5A2.5 2.5 0 004 20.5v-15zM4 20.5A2.5 2.5 0 016.5 18H20"/></svg>',
   award: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5.5"/><path d="M8.5 13.5L7 21l5-2.5 5 2.5-1.5-7.5"/></svg>',
   home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9a1 1 0 01-1 1h-5v-6h-4v6H5a1 1 0 01-1-1v-9z"/></svg>',
+  pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 6 3 3v2H7v-2l3-3-1-6zM12 15v5"/></svg>',
   sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
 };
 const ico = (n) => ICONS[n] || '';
 
 /* Rendering: shell ----------------------------------------------- */
 
+const pageLabel = (route) => { for (const ar of [...AREAS, ...LEARNER_AREAS]) for (const sec of ar.sections) for (const [label, r] of sec.items) if (r === route) return { label, area: ar }; return null; };
+const badgeTip = (s) => ['Needs you (' + (s.overdue.length + s.review.length + s.openFlags.length) + ')', s.overdue.length ? plural(s.overdue.length, 'overdue supervision') : '', s.review.length ? `${s.review.length} awaiting your sign off` : '', s.openFlags.length ? plural(s.openFlags.length, 'open safeguarding flag') : ''].filter(Boolean).join('|');
+
 function renderNav(s) {
   const list = $('#nav-list');
-  const area = AREAS.find((ar) => ar.id === state.navArea);
+  const area = areas().find((ar) => ar.id === state.navArea);
   const cur = areaForRoute(state.route);
+  const item = (label, route, n = 0, pinnable = true) => `<li><a class="nav-item ${state.route === route ? 'active' : ''}" href="#${route}" data-nav ${state.route === route ? 'aria-current="page"' : ''}><span class="label">${label}</span>${n ? `<span class="nav-badge">${n}</span>` : ''}${pinnable ? `<button class="pin ${state.pins.includes(route) ? 'on' : ''}" data-pin="${route}" title="${state.pins.includes(route) ? 'Unpin' : 'Pin to top level'}" aria-label="${state.pins.includes(route) ? 'Unpin' : 'Pin'} ${label}">${ico('pin')}</button>` : ''}</a></li>`;
   let html;
   if (!area) {
-    html = `<li><a class="nav-item ${state.route === '/home' ? 'active' : ''}" href="#/home" data-nav>${ico('home').replace('<svg ', '<svg class="ico" ')}<span class="label">Home</span></a></li>
+    const pins = state.pins.map((r) => ({ r, p: pageLabel(r) })).filter((x) => x.p && areas().some((ar) => ar.sections.some((sec) => sec.items.some(([, rt]) => rt === x.r))));
+    html = `<li><a class="nav-item ${state.route === '/home' ? 'active' : ''}" href="#/home" data-nav ${state.route === '/home' ? 'aria-current="page"' : ''}>${ico('home').replace('<svg ', '<svg class="ico" ')}<span class="label">Home</span></a></li>
+      ${pins.length ? `<li class="nav-section-label show">Pinned</li>${pins.map(({ r, p }) => `<li><a class="nav-item pinned ${state.route === r ? 'active' : ''}" href="#${r}" data-nav><span class="label">${p.label}</span><span class="sub">${p.area.label}</span><button class="pin on" data-pin="${r}" title="Unpin" aria-label="Unpin ${p.label}">${ico('pin')}</button></a></li>`).join('')}` : ''}
       <li class="nav-section-label show">Features</li>
-      ${AREAS.map((ar) => { const badge = ar.badge ? ar.badge(s) : 0; return `<li><button class="nav-parent ${cur && cur.id === ar.id ? 'current' : ''}" data-area="${ar.id}">${ico(ar.icon).replace('<svg ', '<svg class="ico" ')}<span class="label">${ar.label}</span>${badge ? `<span class="nav-badge">${badge}</span>` : ''}${ico('chev')}</button></li>`; }).join('')}`;
+      ${areas().map((ar) => { const badge = ar.badge ? ar.badge(s) : 0; return `<li><button class="nav-parent ${cur && cur.id === ar.id ? 'current' : ''}" data-area="${ar.id}">${ico(ar.icon).replace('<svg ', '<svg class="ico" ')}<span class="label">${ar.label}</span>${badge ? `<span class="nav-badge" data-tip="${esc(badgeTip(s))}">${badge}</span>` : ''}${ico('chev')}</button></li>`; }).join('')}`;
   } else {
+    const others = areas().filter((ar) => ar.id !== area.id);
     html = `<li><button class="nav-back" id="nav-back">${ico('back')}<span>All features</span></button></li>
-      <li class="nav-area-title">${ico(area.icon).replace('<svg ', '<svg class="ico" ')}<span>${area.label}</span></li>
-      ${area.sections.map((sec) => `${area.sections.length > 1 ? `<li class="nav-section-label show">${sec.label}</li>` : ''}${sec.items.map(([label, route, badge]) => { const n = badge ? badge(s) : 0; return `<li><a class="nav-item ${state.route === route ? 'active' : ''}" href="#${route}" data-nav><span class="label">${label}</span>${n ? `<span class="nav-badge">${n}</span>` : ''}</a></li>`; }).join('')}`).join('')}`;
+      <li class="nav-area-title" data-menu-wrap><button class="area-switch" id="area-switch" aria-haspopup="menu" aria-expanded="${state.areaMenu}">${ico(area.icon).replace('<svg ', '<svg class="ico" ')}<span>${area.label}</span>${ico('chevDown')}</button>
+        ${state.areaMenu ? `<div class="menu area-menu" role="menu"><div class="menu-label">Switch feature</div>${others.map((ar) => `<button role="menuitem" data-area="${ar.id}">${ico(ar.icon)}<span>${ar.label}</span></button>`).join('')}</div>` : ''}</li>
+      ${area.sections.map((sec) => `${area.sections.length > 1 ? `<li class="nav-section-label show">${sec.label}</li>` : ''}${sec.items.map(([label, route, badge]) => item(label, route, badge ? badge(s) : 0)).join('')}`).join('')}`;
   }
   list.innerHTML = html;
-  const promo = $('#promo'); if (promo && !promo.dataset.dismissed) promo.hidden = state.navArea !== 'supervisions';
-  if (state.navAnim) { list.classList.remove('enter-forward', 'enter-back'); void list.offsetWidth; list.classList.add(state.navAnim); state.navAnim = null; }
+  const promo = $('#promo'); if (promo && !promo.dataset.dismissed) promo.hidden = !(state.navArea === 'supervisions' && state.role !== 'lr');
+  if (state.navAnim) {
+    list.classList.remove('enter-forward', 'enter-back'); void list.offsetWidth; list.classList.add(state.navAnim); state.navAnim = null;
+    const first = list.querySelector('.nav-back, .nav-item'); if (first && !state.palette) first.focus({ preventScroll: true });
+  }
+}
+
+function renderCrumb() {
+  const crumb = $('#crumb');
+  crumb.hidden = !state.navRail;
+  if (state.navRail) {
+    const ar = areaForRoute(state.route); const p = pageLabel(state.route);
+    crumb.innerHTML = ar ? `<button data-crumb-area="${ar.id}">${ar.label}</button><span class="sep">/</span><span>${p ? p.label : ''}</span>` : `<span>Home</span>`;
+  }
 }
 
 function renderRole() {
@@ -244,6 +286,7 @@ function renderRole() {
 
 function renderTopbar(s) {
   renderRole();
+  renderCrumb();
   $('#btn-chat').classList.toggle('active', state.panelOpen && ['messages', 'thread', 'contacts'].includes(state.panelMode));
   $('#btn-notes').classList.toggle('active', state.panelOpen && state.panelMode === 'notes');
   $('#chat-dot').textContent = s.unread;
@@ -906,10 +949,13 @@ function pageSuite(s) {
 }
 
 function pageHome(s) {
-  const counts = { supervisions: `${plural(s.openActions, 'open action')} · ${pct(s.compliance)} compliance`, learning: '4 courses due this month', competencies: '2 assessments awaiting sign-off', events: '3 training days booked' };
+  const F = FEATURE_STATS;
+  const counts = state.role === 'lr'
+    ? { supervisions: 'Next supervision Thu 10 Sept', learning: `${F.learning.due} courses due · next: ${F.learning.next}`, competencies: `${F.competencies.expiring} expiring soon`, events: F.events.next }
+    : { supervisions: `${s.overdue.length + s.review.length + s.openFlags.length} need you · ${pct(s.compliance)} compliance`, learning: `${F.learning.due} courses due this month · ${F.learning.overdue} overdue`, competencies: `${F.competencies.awaiting} awaiting your sign-off · ${F.competencies.expiring} expiring`, events: `${F.events.booked} training days booked · next: ${F.events.next}` };
   return `${pageHead(`${greeting()}, ${ME.firstName}`, 'Choose a feature to get started.', '', true)}
     <div class="section" style="padding-top:8px"><div class="launcher">
-      ${AREAS.map((ar) => `<button class="launch-card" data-area-go="${ar.id}">
+      ${areas().map((ar) => `<button class="launch-card" data-area-go="${ar.id}">
         <span class="tile">${ico(ar.icon)}</span>
         <span class="title">${ar.label}</span>
         <span class="why">${ar.blurb}</span>
@@ -938,7 +984,7 @@ const ROUTES = {
   '/reports/league': pageLeague,
   '/reports/suite': pageSuite,
 };
-AREAS.forEach((ar) => ar.sections.forEach((sec) => sec.items.forEach(([label, route]) => { if (!ROUTES[route]) ROUTES[route] = pageStub(ar, label); })));
+[...AREAS, ...LEARNER_AREAS].forEach((ar) => ar.sections.forEach((sec) => sec.items.forEach(([label, route]) => { if (!ROUTES[route]) ROUTES[route] = pageStub(ar, label); })));
 
 /* Side panel ----------------------------------------------------- */
 
@@ -1069,6 +1115,36 @@ function doAction(act, id) {
   render();
 }
 
+/* Command palette (⌘K): pages in every feature, people, actions. ----- */
+
+function paletteItems() {
+  const q = state.paletteQuery.trim().toLowerCase();
+  const pages = [];
+  areas().forEach((ar) => ar.sections.forEach((sec) => sec.items.forEach(([label, route]) => pages.push({ kind: 'page', label, sub: ar.label, icon: ar.icon, go: () => go(route), route }))));
+  pages.unshift({ kind: 'page', label: 'Home', sub: 'All features', icon: 'home', go: () => go('/home'), route: '/home' });
+  const people = state.role === 'lr' ? [] : TEAM.map((p) => ({ kind: 'person', label: p.name, sub: p.role, hue: p.hue, id: p.id, go: () => openPanel('person', p.id) }));
+  const actions = [
+    { kind: 'action', label: 'Start new supervision', sub: 'Action', icon: 'plus', go: () => go('/supervisions/new') },
+    { kind: 'action', label: 'Open messages', sub: 'Action', icon: 'chat', go: () => openPanel('messages') },
+    { kind: 'action', label: 'Toggle dark mode', sub: 'Action', icon: 'sun', go: () => toggleTheme() },
+    { kind: 'action', label: state.navRail ? 'Show sidebar' : 'Hide sidebar', sub: 'Action', icon: 'menu', go: () => setNavOpen(state.navRail) },
+  ].filter((x) => state.role !== 'lr' || x.label !== 'Start new supervision');
+  if (!q) {
+    const recent = state.recent.map((r) => pages.find((p) => p.route === r)).filter(Boolean).map((p) => ({ ...p, sub: `Recent · ${p.sub}` }));
+    return [...recent, ...pages.filter((p) => !state.recent.includes(p.route)).slice(0, 6 - Math.min(recent.length, 4)), ...actions.slice(0, 2)];
+  }
+  const hit = (x) => (x.label + ' ' + x.sub).toLowerCase().includes(q);
+  return [...people.filter(hit), ...pages.filter(hit), ...actions.filter(hit)].slice(0, 12);
+}
+function openPalette() { state.palette = true; state.paletteQuery = ''; state.paletteIndex = 0; $('#palette').hidden = false; renderPalette(); const i = $('#palette-input'); i.value = ''; i.focus(); }
+function closePalette() { state.palette = false; $('#palette').hidden = true; }
+function renderPalette() {
+  const items = paletteItems();
+  $('#palette-list').innerHTML = items.length ? items.map((it, i) => `<li><button role="option" aria-selected="${i === state.paletteIndex}" class="${i === state.paletteIndex ? 'sel' : ''}" data-palette-i="${i}">${it.kind === 'person' ? avatar({ id: it.id, name: it.label, hue: it.hue }, 'sm') : `<span class="pi">${ico(it.icon)}</span>`}<span class="pl"><span class="t">${esc(it.label)}</span><span class="s">${esc(it.sub)}</span></span>${it.kind === 'page' ? `<span class="pk">${ico('arrow')}</span>` : ''}</button></li>`).join('') : `<li class="palette-empty">Nothing matches "${esc(state.paletteQuery)}".</li>`;
+  const sel = $('#palette-list .sel'); if (sel) sel.scrollIntoView({ block: 'nearest' });
+}
+function runPaletteItem(i) { const it = paletteItems()[i]; if (!it) return; closePalette(); it.go(); }
+
 /* Router and rendering ------------------------------------------- */
 
 function go(route) { location.hash = '#' + route; }
@@ -1109,10 +1185,15 @@ function setupScrollSpy() {
 
 function onHashChange() {
   const route = location.hash.replace(/^#/, '') || '/dashboard';
-  state.route = ROUTES[route] ? route : '/dashboard';
+  state.route = ROUTES[route] ? route : '/home';
   const ar = areaForRoute(state.route);
+  if (state.route !== '/home' && !ar) { location.hash = '#/home'; return; }
   if (state.route === '/home') { if (state.navArea) state.navAnim = 'enter-back'; state.navArea = null; }
   else if (ar && ar.id !== state.navArea) { state.navAnim = state.navArea ? null : 'enter-forward'; state.navArea = ar.id; }
+  if (ar) state.lastRoute[ar.id] = state.route;
+  if (state.route !== '/home') { state.recent = [state.route, ...state.recent.filter((r) => r !== state.route)].slice(0, 6); }
+  state.areaMenu = false;
+  saveStore();
   if (state.panelMode === 'person') { state.panelMode = 'messages'; state.panelOpen = false; }
   render();
   $('#page').scrollTop = 0;
@@ -1126,6 +1207,8 @@ function setNavOpen(open) {
   state.navRail = !open;
   $('#app').classList.toggle('nav-rail', !open);
   $('#btn-nav-open').hidden = open;
+  renderCrumb();
+  saveStore();
 }
 
 function openPanel(mode, arg = null) {
@@ -1136,14 +1219,24 @@ function openPanel(mode, arg = null) {
 document.addEventListener('click', (e) => {
   if (state.openMenu && !e.target.closest('[data-menu-wrap]')) { state.openMenu = null; render(); }
   if (state.roleMenu && !e.target.closest('.me-wrap')) { state.roleMenu = false; renderRole(); }
-  const t = e.target.closest('[data-area],[data-area-go],#nav-back,[data-scroll],[data-go],[data-person],[data-act],[data-thread],[data-msg-filter],[data-cycle-filter],[data-sort],[data-cal],[data-message],[data-nav],#btn-menu,#btn-chat,#btn-notes,#panel-close,#panel-back,#scrim,#announce-prev,#announce-next,#announce-close,#btn-theme,#promo-close,[data-range],[data-menu],[data-attn-filter],#btn-bell,[data-msg-tab],[data-notif],#notif-readall,#btn-role,[data-role],#btn-nav-open');
+  if (state.areaMenu && !e.target.closest('.nav-area-title')) { state.areaMenu = false; render(); }
+  if (state.palette && e.target.id === 'palette') { closePalette(); return; }
+  const t = e.target.closest('[data-pin],[data-crumb-area],#area-switch,#nav-scrim,#search-open,[data-palette-i],[data-area],[data-area-go],#nav-back,[data-scroll],[data-go],[data-person],[data-act],[data-thread],[data-msg-filter],[data-cycle-filter],[data-sort],[data-cal],[data-message],[data-nav],#btn-menu,#btn-chat,#btn-notes,#panel-close,#panel-back,#scrim,#announce-prev,#announce-next,#announce-close,#btn-theme,#promo-close,[data-range],[data-menu],[data-attn-filter],#btn-bell,[data-msg-tab],[data-notif],#notif-readall,#btn-role,[data-role],#btn-nav-open');
   if (!t) return;
   if (t.dataset.area || t.dataset.areaGo) {
-    const ar = AREAS.find((x) => x.id === (t.dataset.area || t.dataset.areaGo));
-    if (state.navRail) setNavOpen(true);
+    const ar = areas().find((x) => x.id === (t.dataset.area || t.dataset.areaGo));
+    if (state.navRail && !t.dataset.areaGo) setNavOpen(true);
+    state.areaMenu = false;
     if (areaForRoute(state.route) === ar) { state.navArea = ar.id; state.navAnim = 'enter-forward'; render(); return; }
-    state.navArea = null; go(ar.home); return;
+    const dest = state.lastRoute[ar.id] && ROUTES[state.lastRoute[ar.id]] && areaForRoute(state.lastRoute[ar.id]) === ar ? state.lastRoute[ar.id] : ar.home;
+    state.navArea = null; go(dest); return;
   }
+  if (t.dataset.pin) { e.preventDefault(); const r = t.dataset.pin; state.pins = state.pins.includes(r) ? state.pins.filter((x) => x !== r) : [...state.pins, r]; saveStore(); render(); return; }
+  if (t.dataset.crumbArea) { setNavOpen(true); state.navArea = t.dataset.crumbArea; state.navAnim = 'enter-forward'; render(); return; }
+  if (t.id === 'area-switch') { state.areaMenu = !state.areaMenu; render(); return; }
+  if (t.id === 'nav-scrim') { setNavOpen(false); return; }
+  if (t.id === 'search-open') { openPalette(); return; }
+  if (t.dataset.paletteI != null) { runPaletteItem(Number(t.dataset.paletteI)); return; }
   if (t.id === 'nav-back') { state.navArea = null; state.navAnim = 'enter-back'; render(); return; }
   if (t.dataset.scroll) { const sec = document.getElementById(t.dataset.scroll); if (sec) sec.scrollIntoView({ block: 'start' }); return; }
   if (t.dataset.go) { go(t.dataset.go); return; }
@@ -1177,13 +1270,14 @@ document.addEventListener('click', (e) => {
     return;
   }
   if (t.id === 'btn-role') { state.roleMenu = !state.roleMenu; renderRole(); return; }
-  if (t.dataset.role) { const r = ROLES.find((x) => x.id === t.dataset.role); state.role = r.id; state.roleMenu = false; renderRole(); toast(`Switched to ${r.role} at ${r.site}. The prototype keeps the manager view.`); return; }
+  if (t.dataset.role) { const r = ROLES.find((x) => x.id === t.dataset.role); const was = state.role; state.role = r.id; state.roleMenu = false; if ((was === 'lr') !== (r.id === 'lr')) { state.navArea = null; state.navAnim = 'enter-back'; if (location.hash !== '#/home') go('/home'); else render(); } else renderRole(); toast(`Switched to ${r.role} at ${r.site}.${r.id === 'lr' ? ' Showing the learner menus.' : ''}`); return; }
   if (t.id === 'promo-close') { $('#promo').hidden = true; $('#promo').dataset.dismissed = '1'; return; }
   if (t.dataset.menu) { state.openMenu = state.openMenu === t.dataset.menu ? null : t.dataset.menu; render(); return; }
   if (t.dataset.range) { state.trendRange = t.dataset.range; render(); return; }
 });
 
 document.addEventListener('input', (e) => {
+  if (e.target.id === 'palette-input') { state.paletteQuery = e.target.value; state.paletteIndex = 0; renderPalette(); return; }
   if (e.target.matches('[data-contact-search]')) {
     state.contactSearch = e.target.value; const pos = e.target.selectionStart; render();
     const el = $('[data-contact-search]'); if (el) { el.focus(); el.setSelectionRange(pos, pos); }
@@ -1203,7 +1297,15 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && state.openMenu) { state.openMenu = null; render(); return; }
   if (e.key === 'Escape' && state.panelOpen) { state.panelOpen = false; render(); }
   if ((e.key === 'd' || e.key === 'D') && !e.metaKey && !e.ctrlKey && !/input|textarea/i.test(e.target.tagName)) toggleTheme();
-  if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); $('#search-input').focus(); }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); state.palette ? closePalette() : openPalette(); return; }
+  if (state.palette) {
+    if (e.key === 'Escape') { closePalette(); return; }
+    const n = paletteItems().length;
+    if (e.key === 'ArrowDown') { e.preventDefault(); state.paletteIndex = (state.paletteIndex + 1) % Math.max(1, n); renderPalette(); return; }
+    if (e.key === 'ArrowUp') { e.preventDefault(); state.paletteIndex = (state.paletteIndex - 1 + Math.max(1, n)) % Math.max(1, n); renderPalette(); return; }
+    if (e.key === 'Enter') { e.preventDefault(); runPaletteItem(state.paletteIndex); return; }
+    return;
+  }
 });
 
 function toggleTheme() {
@@ -1213,5 +1315,13 @@ function toggleTheme() {
 }
 
 if (typeof AVATARS !== 'undefined' && AVATARS.jo) { const me = $('#me-avatar'); if (me) { me.classList.add('has-photo'); me.innerHTML = `<img src="${AVATARS.jo}" alt="">`; } }
+{
+  const st = loadStore();
+  state.pins = Array.isArray(st.pins) ? st.pins : [];
+  state.lastRoute = st.lastRoute && typeof st.lastRoute === 'object' ? st.lastRoute : {};
+  state.recent = Array.isArray(st.recent) ? st.recent : [];
+  const startHidden = typeof st.navRail === 'boolean' ? st.navRail : window.innerWidth <= 900;
+  if (startHidden) setNavOpen(false);
+}
 window.addEventListener('hashchange', onHashChange);
 onHashChange();

@@ -22,9 +22,17 @@ npx -y serve .
 
 ## How it works
 
-- **Navigation.** Parents in the left nav (Supervisions, Development,
-  Safeguarding, Reports) expand to show their children. One is open at a
-  time and the open group follows the route, so deep links work.
+- **Navigation.** The sidebar has two levels. The top level lists Home,
+  pinned pages and the features (Learning, Competencies, Events,
+  Supervisions). Entering a feature swaps the menu for that feature's own
+  pages, with an "All features" link back and a feature switcher on the
+  title. Each feature remembers the last page you were on. Hover a page to
+  pin it to the top level. Collapse the sidebar and a breadcrumb plus an
+  open button appear in the top bar; on phones the sidebar is a drawer.
+  The role switcher in the profile card changes the menus (Learner sees
+  "my" pages only).
+- **⌘K palette.** Search people, pages in every feature and actions, with
+  recent pages first. Arrow keys and Enter.
 - **Section tabs.** Sticky under the page title. Clicking scrolls to the
   section; a scroll-spy keeps the active tab correct when scrolling by hand.
 - **Side panel.** Messages, a person's profile (click any name) and
@@ -38,7 +46,8 @@ npx -y serve .
 - **Actions update the model.** Sign off, chase, book, book a return
   supervision and triage decisions change the data and everything
   recalculates.
-- Press `D` to toggle dark mode. `⌘K` focuses search.
+- Press `D` to toggle dark mode. `⌘K` opens the palette. Sidebar state,
+  pins, last pages and recents persist in `localStorage`.
 
 The date is fixed at Wednesday 2 September 2026 (`TODAY` in `data.js`)
 so the sample story stays coherent.

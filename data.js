@@ -256,3 +256,10 @@ const ANNOUNCEMENTS = [
   { text: 'Supervision templates were updated on 20 August. New records use the updated wellbeing section.', more: 'See what changed', href: '/supervisions/new' },
   { text: 'Planned maintenance Sunday 14 September, 02:00 to 04:00. myAko will be read-only.', more: 'Details', href: '/dashboard' },
 ];
+
+/* Cross-feature context for the Home cards and the Supervisions badge. */
+const FEATURE_STATS = {
+  learning: { due: 4, overdue: 1, next: 'Safeguarding adults refresher' },
+  competencies: { awaiting: 2, expiring: 3 },
+  events: { booked: 3, next: 'Manual handling, Tue 9 Sept' },
+};
