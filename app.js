@@ -255,7 +255,7 @@ function renderNav(s) {
   } else {
     html = `<li><button class="nav-back" id="nav-back">${ico('back')}<span>Back</span></button></li>
       <li class="nav-eyebrow">${area.label}</li>
-      ${area.sections.map((sec, i) => `${i > 0 ? '<li class="nav-gap"></li>' : ''}${sec.items.map(([label, route, badge]) => item(label, route, badge ? badge(s) : 0)).join('')}`).join('')}`;
+      ${area.sections.map((sec) => sec.items.map(([label, route, badge]) => item(label, route, badge ? badge(s) : 0)).join('')).join('')}`;
   }
   list.innerHTML = html;
   const promo = $('#promo'); if (promo && !promo.dataset.dismissed) promo.hidden = !(state.navArea === 'supervisions' && state.role !== 'lr');
