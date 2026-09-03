@@ -1038,7 +1038,7 @@ tr.is-me td { background: var(--accent-soft); }
 .presence { position: absolute; right: -1px; bottom: -1px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--surface); background: var(--line-strong); }
 .presence.online { background: var(--good); } .presence.away { background: var(--warn); } .presence.leave { background: var(--info); }
 .contact {
-  display: flex; align-items: center; gap: 12px; width: calc(100% - 24px); margin: 0 12px;
+  display: flex; align-items: center; gap: 12px; width: calc(100% - 24px); margin: 0 12px 2px;
   padding: 10px 12px; border-radius: 12px; text-align: left;
   transition: background var(--dur) var(--ease);
 }
@@ -1052,7 +1052,7 @@ tr.is-me td { background: var(--accent-soft); }
 .group-label { padding: 10px 22px 4px; font-size: 12px; font-weight: 500; color: var(--ink-3); }
 .notif {
   display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start;
-  width: calc(100% - 24px); margin: 0 12px; text-align: left;
+  width: calc(100% - 24px); margin: 0 12px 6px; text-align: left;
   padding: 12px 12px; border-radius: 12px;
   transition: background var(--dur) var(--ease);
 }
@@ -1067,7 +1067,7 @@ tr.is-me td { background: var(--accent-soft); }
 .tile.round.muted { background: var(--surface-3); color: var(--ink-2); }
 .msg {
   display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px;
-  width: calc(100% - 24px); margin: 0 12px; text-align: left;
+  width: calc(100% - 24px); margin: 0 12px 6px; text-align: left;
   padding: 14px 12px;
   border-radius: 12px;
   transition: background var(--dur) var(--ease);
@@ -1168,7 +1168,7 @@ tr.is-me td { background: var(--accent-soft); }
   .tabbar .dot { position: absolute; top: 6px; left: calc(50% + 4px); min-width: 16px; height: 16px; padding: 0 4px; border-radius: var(--pill); background: var(--ink); color: var(--ink-inverse); font-size: 10px; font-weight: 600; line-height: 16px; text-align: center; box-shadow: 0 0 0 2px var(--surface); }
   .panel { z-index: 47; }
   .panel-head { padding-left: 16px; }
-  .msg, .contact, .notif { width: calc(100% - 16px); margin: 0 8px; }
+  .msg, .contact, .notif { width: calc(100% - 16px); margin-left: 8px; margin-right: 8px; }
   .toasts { bottom: 72px; width: calc(100vw - 32px); }
   .toast { white-space: normal; text-align: center; }
   .palette { padding-top: 6vh; }

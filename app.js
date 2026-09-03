@@ -1329,8 +1329,8 @@ if (typeof AVATARS !== 'undefined' && AVATARS.jo) { const me = $('#me-avatar'); 
   state.pins = Array.isArray(st.pins) ? st.pins : [];
   state.lastRoute = st.lastRoute && typeof st.lastRoute === 'object' ? st.lastRoute : {};
   state.recent = Array.isArray(st.recent) ? st.recent : [];
-  const startHidden = typeof st.navRail === 'boolean' ? st.navRail : window.innerWidth <= 900;
-  if (startHidden) setNavOpen(false);
+  // The sidebar always starts open on desktop; it only starts closed on phones.
+  if (window.innerWidth <= 900) setNavOpen(false);
 }
 window.addEventListener('hashchange', onHashChange);
 onHashChange();
