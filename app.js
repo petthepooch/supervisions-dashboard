@@ -253,11 +253,9 @@ function renderNav(s) {
       <li class="nav-section-label show">Features</li>
       ${areas().map((ar) => { const badge = ar.badge ? ar.badge(s) : 0; return `<li><button class="nav-parent ${cur && cur.id === ar.id ? 'current' : ''}" data-area="${ar.id}">${ico(ar.icon).replace('<svg ', '<svg class="ico" ')}<span class="label">${ar.label}</span>${badge ? `<span class="nav-badge" data-tip="${esc(badgeTip(s))}">${badge}</span>` : ''}${ico('chev')}</button></li>`; }).join('')}`;
   } else {
-    const others = areas().filter((ar) => ar.id !== area.id);
-    html = `<li><button class="nav-back" id="nav-back">${ico('back')}<span>All features</span></button></li>
-      <li class="nav-area-title" data-menu-wrap><button class="area-switch" id="area-switch" aria-haspopup="menu" aria-expanded="${state.areaMenu}">${ico(area.icon).replace('<svg ', '<svg class="ico" ')}<span>${area.label}</span>${ico('chevDown')}</button>
-        ${state.areaMenu ? `<div class="menu area-menu" role="menu"><div class="menu-label">Switch feature</div>${others.map((ar) => `<button role="menuitem" data-area="${ar.id}">${ico(ar.icon)}<span>${ar.label}</span></button>`).join('')}</div>` : ''}</li>
-      ${area.sections.map((sec) => `${area.sections.length > 1 ? `<li class="nav-section-label show">${sec.label}</li>` : ''}${sec.items.map(([label, route, badge]) => item(label, route, badge ? badge(s) : 0)).join('')}`).join('')}`;
+    html = `<li><button class="nav-back" id="nav-back">${ico('back')}<span>Back</span></button></li>
+      <li class="nav-eyebrow">${area.label}</li>
+      ${area.sections.map((sec, i) => `${i > 0 ? '<li class="nav-gap"></li>' : ''}${sec.items.map(([label, route, badge]) => item(label, route, badge ? badge(s) : 0)).join('')}`).join('')}`;
   }
   list.innerHTML = html;
   const promo = $('#promo'); if (promo && !promo.dataset.dismissed) promo.hidden = !(state.navArea === 'supervisions' && state.role !== 'lr');
