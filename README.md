@@ -31,6 +31,11 @@ npx -y serve .
   open button appear in the top bar; on phones the sidebar is a drawer.
   The role switcher in the profile card changes the menus (Learner sees
   "my" pages only).
+- **Responsive.** The content column responds to its own width (container
+  queries), so it holds up with both side panels open. Below 640px the
+  app gets a bottom tab bar (Home, Menu, Search, Messages, Alerts), the
+  sidebar becomes a drawer, the side panel goes full width, and the
+  calendar shows dots instead of chips.
 - **⌘K palette.** Search people, pages in every feature and actions, with
   recent pages first. Arrow keys and Enter.
 - **Section tabs.** Sticky under the page title. Clicking scrolls to the

@@ -119,6 +119,14 @@
   </div>
 </div>
 
+<nav class="tabbar" id="tabbar" aria-label="Quick access">
+  <button data-tab="home" data-go="/home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9a1 1 0 01-1 1h-5v-6h-4v6H5a1 1 0 01-1-1v-9z"/></svg><span>Home</span></button>
+  <button data-tab="menu" id="tab-menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>Menu</span></button>
+  <button data-tab="search" id="tab-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg><span>Search</span></button>
+  <button data-tab="chat" id="tab-chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 016.5 3h11A2.5 2.5 0 0120 5.5v8a2.5 2.5 0 01-2.5 2.5H9l-5 4v-4H6.5A2.5 2.5 0 014 13.5v-8z"/></svg><span>Messages</span><span class="dot" id="tab-chat-dot" hidden></span></button>
+  <button data-tab="bell" id="tab-bell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0112 0v5l1.5 2h-15L6 16zM10 20a2 2 0 004 0"/></svg><span>Alerts</span><span class="dot" id="tab-bell-dot" hidden></span></button>
+</nav>
+
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
 <script src="data.js"></script>

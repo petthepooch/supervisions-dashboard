@@ -290,6 +290,13 @@ function renderTopbar(s) {
   $('#btn-bell').classList.toggle('active', state.panelOpen && state.panelMode === 'notifications');
   $('#bell-dot').textContent = s.unreadNotifs;
   $('#bell-dot').hidden = !s.unreadNotifs;
+  $('#tab-chat-dot').textContent = s.unread; $('#tab-chat-dot').hidden = !s.unread;
+  $('#tab-bell-dot').textContent = s.unreadNotifs; $('#tab-bell-dot').hidden = !s.unreadNotifs;
+  $$('.tabbar button').forEach((b) => b.classList.toggle('active',
+    (b.dataset.tab === 'home' && state.route === '/home' && !state.panelOpen) ||
+    (b.dataset.tab === 'menu' && !state.navRail) ||
+    (b.dataset.tab === 'chat' && state.panelOpen && ['messages', 'thread', 'contacts'].includes(state.panelMode)) ||
+    (b.dataset.tab === 'bell' && state.panelOpen && state.panelMode === 'notifications')));
   const a = $('#announce');
   a.hidden = state.announceHidden;
   const item = ANNOUNCEMENTS[state.announceIdx];
@@ -1191,6 +1198,7 @@ function onHashChange() {
   state.areaMenu = false;
   saveStore();
   if (state.panelMode === 'person') { state.panelMode = 'messages'; state.panelOpen = false; }
+  if (window.innerWidth <= 900 && !state.navRail) setNavOpen(false);
   render();
   $('#page').scrollTop = 0;
 }
@@ -1204,6 +1212,7 @@ function setNavOpen(open) {
   $('#app').classList.toggle('nav-rail', !open);
   $('#btn-nav-open').hidden = open;
   renderCrumb();
+  const tm = $('#tab-menu'); if (tm) tm.classList.toggle('active', open);
   saveStore();
 }
 
@@ -1217,7 +1226,7 @@ document.addEventListener('click', (e) => {
   if (state.roleMenu && !e.target.closest('.me-wrap')) { state.roleMenu = false; renderRole(); }
   if (state.areaMenu && !e.target.closest('.nav-area-title')) { state.areaMenu = false; render(); }
   if (state.palette && e.target.id === 'palette') { closePalette(); return; }
-  const t = e.target.closest('[data-pin],[data-crumb-area],#area-switch,#nav-scrim,#search-open,[data-palette-i],[data-area],[data-area-go],#nav-back,[data-scroll],[data-go],[data-person],[data-act],[data-thread],[data-msg-filter],[data-cycle-filter],[data-sort],[data-cal],[data-message],[data-nav],#btn-menu,#btn-chat,#btn-notes,#panel-close,#panel-back,#scrim,#announce-prev,#announce-next,#announce-close,#btn-theme,#promo-close,[data-range],[data-menu],[data-attn-filter],#btn-bell,[data-msg-tab],[data-notif],#notif-readall,#btn-role,[data-role],#btn-nav-open');
+  const t = e.target.closest('#tab-menu,#tab-search,#tab-chat,#tab-bell,[data-pin],[data-crumb-area],#area-switch,#nav-scrim,#search-open,[data-palette-i],[data-area],[data-area-go],#nav-back,[data-scroll],[data-go],[data-person],[data-act],[data-thread],[data-msg-filter],[data-cycle-filter],[data-sort],[data-cal],[data-message],[data-nav],#btn-menu,#btn-chat,#btn-notes,#panel-close,#panel-back,#scrim,#announce-prev,#announce-next,#announce-close,#btn-theme,#promo-close,[data-range],[data-menu],[data-attn-filter],#btn-bell,[data-msg-tab],[data-notif],#notif-readall,#btn-role,[data-role],#btn-nav-open');
   if (!t) return;
   if (t.dataset.area || t.dataset.areaGo) {
     const ar = areas().find((x) => x.id === (t.dataset.area || t.dataset.areaGo));
@@ -1231,6 +1240,10 @@ document.addEventListener('click', (e) => {
   if (t.dataset.crumbArea) { if (state.navRail) setNavOpen(true); state.navArea = t.dataset.crumbArea; state.navAnim = 'enter-forward'; render(); return; }
   if (t.id === 'area-switch') { state.areaMenu = !state.areaMenu; render(); return; }
   if (t.id === 'nav-scrim') { setNavOpen(false); return; }
+  if (t.id === 'tab-menu') { if (state.panelOpen) { state.panelOpen = false; render(); } setNavOpen(state.navRail); return; }
+  if (t.id === 'tab-search') { openPalette(); return; }
+  if (t.id === 'tab-chat') { if (!state.navRail && window.innerWidth <= 900) setNavOpen(false); if (state.panelOpen && ['messages', 'thread', 'contacts'].includes(state.panelMode)) { state.panelOpen = false; render(); } else openPanel('messages'); return; }
+  if (t.id === 'tab-bell') { if (!state.navRail && window.innerWidth <= 900) setNavOpen(false); if (state.panelOpen && state.panelMode === 'notifications') { state.panelOpen = false; render(); } else openPanel('notifications'); return; }
   if (t.id === 'search-open') { openPalette(); return; }
   if (t.dataset.paletteI != null) { runPaletteItem(Number(t.dataset.paletteI)); return; }
   if (t.id === 'nav-back') { state.navArea = null; state.navAnim = 'enter-back'; render(); return; }
