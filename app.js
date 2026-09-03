@@ -1120,6 +1120,14 @@ function onHashChange() {
 
 /* Events --------------------------------------------------------- */
 
+/* The sidebar is either fully open or hidden; when hidden, the open
+   button appears in the top bar beside search. */
+function setNavOpen(open) {
+  state.navRail = !open;
+  $('#app').classList.toggle('nav-rail', !open);
+  $('#btn-nav-open').hidden = open;
+}
+
 function openPanel(mode, arg = null) {
   state.panelOpen = true; state.panelMode = mode; state.panelArg = arg;
   render();
@@ -1128,11 +1136,11 @@ function openPanel(mode, arg = null) {
 document.addEventListener('click', (e) => {
   if (state.openMenu && !e.target.closest('[data-menu-wrap]')) { state.openMenu = null; render(); }
   if (state.roleMenu && !e.target.closest('.me-wrap')) { state.roleMenu = false; renderRole(); }
-  const t = e.target.closest('[data-area],[data-area-go],#nav-back,[data-scroll],[data-go],[data-person],[data-act],[data-thread],[data-msg-filter],[data-cycle-filter],[data-sort],[data-cal],[data-message],[data-nav],#btn-menu,#btn-chat,#btn-notes,#panel-close,#panel-back,#scrim,#announce-prev,#announce-next,#announce-close,#btn-theme,#promo-close,[data-range],[data-menu],[data-attn-filter],#btn-bell,[data-msg-tab],[data-notif],#notif-readall,#btn-role,[data-role]');
+  const t = e.target.closest('[data-area],[data-area-go],#nav-back,[data-scroll],[data-go],[data-person],[data-act],[data-thread],[data-msg-filter],[data-cycle-filter],[data-sort],[data-cal],[data-message],[data-nav],#btn-menu,#btn-chat,#btn-notes,#panel-close,#panel-back,#scrim,#announce-prev,#announce-next,#announce-close,#btn-theme,#promo-close,[data-range],[data-menu],[data-attn-filter],#btn-bell,[data-msg-tab],[data-notif],#notif-readall,#btn-role,[data-role],#btn-nav-open');
   if (!t) return;
   if (t.dataset.area || t.dataset.areaGo) {
     const ar = AREAS.find((x) => x.id === (t.dataset.area || t.dataset.areaGo));
-    if (state.navRail) { state.navRail = false; $('#app').classList.remove('nav-rail'); }
+    if (state.navRail) setNavOpen(true);
     if (areaForRoute(state.route) === ar) { state.navArea = ar.id; state.navAnim = 'enter-forward'; render(); return; }
     state.navArea = null; go(ar.home); return;
   }
@@ -1149,7 +1157,7 @@ document.addEventListener('click', (e) => {
   if (t.dataset.sort) { const k = t.dataset.sort; state.leagueSort = state.leagueSort.key === k ? { key: k, dir: state.leagueSort.dir === 'asc' ? 'desc' : 'asc' } : { key: k, dir: k === 'name' || k === 'site' || k === 'rank' ? 'asc' : 'desc' }; render(); return; }
   if (t.dataset.cal) { state.calMonth = t.dataset.cal === 'today' ? new Date(TODAY.getFullYear(), TODAY.getMonth(), 1) : new Date(state.calMonth.getFullYear(), state.calMonth.getMonth() + Number(t.dataset.cal), 1); render(); return; }
   if (t.dataset.act) { doAction(t.dataset.act, t.dataset.id); return; }
-  if (t.id === 'btn-menu') { state.navRail = !state.navRail; $('#app').classList.toggle('nav-rail', state.navRail); return; }
+  if (t.id === 'btn-menu' || t.id === 'btn-nav-open') { setNavOpen(state.navRail); return; }
   if (t.id === 'btn-chat') { if (state.panelOpen && (state.panelMode === 'messages' || state.panelMode === 'thread')) { state.panelOpen = false; render(); } else openPanel('messages'); return; }
   if (t.id === 'btn-notes') { if (state.panelOpen && state.panelMode === 'notes') { state.panelOpen = false; render(); } else openPanel('notes'); return; }
   if (t.id === 'panel-close' || t.id === 'scrim') { state.panelOpen = false; render(); return; }
