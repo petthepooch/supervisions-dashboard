@@ -51,7 +51,18 @@ npx -y serve .
 - **Actions update the model.** Sign off, chase, book, book a return
   supervision and triage decisions change the data and everything
   recalculates.
-- Press `D` to toggle dark mode. `⌘K` opens the palette. Sidebar state,
+- **Record view.** Open any record (focus cards, Actions menu, person
+  panel, calendar) to read the wellbeing score, discussion, agreed actions
+  and any safeguarding flag, then sign off or send back.
+- **Undo.** Sign off, chase, book, return from leave and triage decisions
+  can be undone from the toast for a few seconds.
+- **Scope and clock.** The page head has a site scope selector and a
+  prototype clock; move the date to watch the dashboard change.
+- **Calendar.** Month or week view; click an empty weekday to start a
+  supervision on that date.
+- **Team supervisions.** Tick rows to chase, reassign or export a selection.
+- Press `D` to toggle dark mode, `⌘K` opens the palette, `?` lists shortcuts.
+  A short tour runs on the first visit. Sidebar state,
   pins, last pages and recents persist in `localStorage`.
 
 The date is fixed at Wednesday 2 September 2026 (`TODAY` in `data.js`)

@@ -5,7 +5,7 @@
    disagree with each other.
    --------------------------------------------------------------- */
 
-const TODAY = new Date(2026, 8, 2); // Wed 2 September 2026
+let TODAY = new Date(2026, 8, 2); // Wed 2 September 2026 (the prototype clock; time travel moves it)
 
 /* Supervision policy for this organisation. */
 const POLICY = {
@@ -131,7 +131,7 @@ const TEAM = [
     pdp: { objectives: 4, complete: 3, review: '2026-11-12' },
   },
   {
-    id: 'lo', name: "Liam O'Connor", role: 'Night Care Assistant', site: 'Northfield House',
+    id: 'lo', name: "Liam O'Connor", role: 'Night Care Assistant', site: 'Willow House',
     hue: 250, started: '2024-10-14',
     history: [
       { type: 'Quarterly supervision', signedOff: '2026-04-14' },
@@ -143,7 +143,7 @@ const TEAM = [
     pdp: { objectives: 2, complete: 1, review: '2027-01-07' },
   },
   {
-    id: 'ga', name: 'Grace Adeyemi', role: 'Care Assistant', site: 'Northfield House',
+    id: 'ga', name: 'Grace Adeyemi', role: 'Care Assistant', site: 'Willow House',
     hue: 60, started: '2022-02-14',
     history: [
       { type: 'Quarterly supervision', signedOff: '2026-02-09' },
@@ -155,7 +155,7 @@ const TEAM = [
     pdp: { objectives: 3, complete: 3, review: '2026-11-05' },
   },
   {
-    id: 'rp', name: 'Ravi Patel', role: 'Care Assistant', site: 'Northfield House',
+    id: 'rp', name: 'Ravi Patel', role: 'Care Assistant', site: 'Willow House',
     hue: 190, started: '2026-06-15', probation: true,
     history: [
       { type: 'Induction supervision', signedOff: '2026-07-15' },
@@ -262,4 +262,30 @@ const FEATURE_STATS = {
   learning: { due: 4, overdue: 1, next: 'Safeguarding adults refresher' },
   competencies: { awaiting: 2, expiring: 3 },
   events: { booked: 3, next: 'Manual handling, Tue 9 Sept' },
+};
+
+/* Supervision record content for the records that have been written up.
+   Anyone without an entry gets a generic template on the record page. */
+const RECORDS = {
+  sm: {
+    held: '2026-08-24', by: 'James Okafor', duration: '50 min', location: 'Northfield House, quiet room',
+    wellbeing: { score: 4, note: 'Feeling settled after the rota change. Sleep better since moving off nights. Some worry about the new resident on Elm wing.' },
+    discussion: [
+      'Reviewed the medication round changes introduced in July. Sarah is confident with the new MAR sheets and has been supporting two colleagues.',
+      'Discussed the night-shift incident on 19 August. Sarah recorded a disclosure from a resident; safeguarding flag raised and passed to the manager for triage.',
+      'Q2 PDP objectives all complete with evidence attached. Sarah would like to start the Level 3 Lead Adult Care Worker qualification.',
+    ],
+    actions: [
+      { text: 'Enrol on Level 3 Lead Adult Care Worker (James to request funding)', owner: 'James', due: '2026-09-30', done: false },
+      { text: 'Shadow Amina on two supervision meetings before running her own', owner: 'Sarah', due: '2026-10-31', done: false },
+      { text: 'Upload medication competency reflection', owner: 'Sarah', due: '2026-08-31', done: true },
+    ],
+    flag: 'sg1',
+  },
+  tw: {
+    held: null, by: 'James Okafor', duration: null, location: null,
+    wellbeing: null, discussion: [], actions: [
+      { text: 'Complete moving and handling refresher', owner: 'Tom', due: '2026-07-31', done: false },
+    ], flag: null,
+  },
 };
