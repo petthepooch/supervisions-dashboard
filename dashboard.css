@@ -176,6 +176,7 @@ svg.i { width: 18px; height: 18px; flex: none; }
 
 .nav-scroll { flex: 1; overflow-y: auto; padding: 6px 12px 12px; }
 .nav-section-label { display: none; }
+.nav-section-label.show { display: block; margin: 16px 12px 6px; font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
 
 .nav-item, .nav-parent {
   display: flex; align-items: center; gap: 12px;
@@ -196,6 +197,16 @@ svg.i { width: 18px; height: 18px; flex: none; }
 .nav-parent .chev { width: 14px; height: 14px; color: var(--ink-3); transition: transform var(--dur) var(--ease); flex: none; }
 .nav-group.open .nav-parent .chev { transform: rotate(90deg); }
 .nav-group.has-active .nav-parent { font-weight: 500; }
+.nav-parent.current .label { font-weight: 500; }
+.nav-back { display: inline-flex; align-items: center; gap: 6px; padding: 6px 8px; margin: 0 0 6px -4px; border-radius: var(--radius-m); font-size: 13px; color: var(--ink-2); }
+.nav-back:hover { background: var(--surface-3); color: var(--ink); }
+.nav-back svg { width: 15px; height: 15px; }
+.nav-area-title { display: flex; align-items: center; gap: 10px; padding: 6px 12px 10px; font-size: 16px; font-weight: 600; color: var(--ink); }
+.nav-area-title .ico { width: 18px; height: 18px; }
+#nav-list.enter-forward { animation: nav-fwd 220ms var(--ease); }
+#nav-list.enter-back { animation: nav-back 220ms var(--ease); }
+@keyframes nav-fwd { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+@keyframes nav-back { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: none; } }
 .nav-badge {
   flex: none; min-width: 20px; height: 20px; padding: 0 6px;
   border-radius: var(--pill); background: var(--surface-3); color: var(--ink-2);
@@ -240,7 +251,7 @@ svg.i { width: 18px; height: 18px; flex: none; }
 
 .nav-rail .nav .label, .nav-rail .nav .chev, .nav-rail .nav-badge, .nav-rail .brand-word,
 .nav-rail .org-select, .nav-rail .search, .nav-rail .promo, .nav-rail .me .who, .nav-rail .me svg,
-.nav-rail .nav-children { display: none; }
+.nav-rail .nav-children, .nav-rail .nav-back span, .nav-rail .nav-area-title span, .nav-rail .nav-section-label { display: none; }
 .nav-rail .nav-brand { justify-content: center; padding: 0; flex-direction: column; gap: 10px; }
 .nav-rail .nav-item, .nav-rail .nav-parent { justify-content: center; padding: 10px 0; }
 .nav-rail .nav-scroll { padding: 6px 10px; }
@@ -574,6 +585,24 @@ svg.i { width: 18px; height: 18px; flex: none; }
 .focus-card.t-info .tile.tone { background: var(--info-soft); color: var(--info); }
 .focus-card.t-accent .tile.tone { background: var(--accent-soft); color: var(--accent-ink); }
 @media (max-width: 900px) { .focus { grid-template-columns: 1fr; } }
+
+/* Home launcher */
+.launcher { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 900px) { .launcher { grid-template-columns: 1fr; } }
+.launch-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+  padding: 22px 22px 18px; text-align: left;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-l);
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.launch-card:hover { border-color: var(--line-strong); box-shadow: 0 2px 10px rgba(15, 15, 17, 0.05); }
+.launch-card .tile { margin-bottom: 10px; }
+.launch-card .title { font-size: 17px; font-weight: 600; }
+.launch-card .why { color: var(--ink-2); font-size: 14px; }
+.launch-card .foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.launch-card .meta { font-size: 13px; color: var(--ink-3); }
+.launch-card .cta { font-weight: 500; font-size: 14px; display: inline-flex; align-items: center; gap: 4px; }
+.launch-card .cta svg { width: 14px; height: 14px; }
 
 /* Needs attention: intro sits above the card, filters attach to it. */
 .attn-intro {

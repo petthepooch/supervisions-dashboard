@@ -146,7 +146,8 @@ const state = {
   calMonth: new Date(TODAY.getFullYear(), TODAY.getMonth(), 1),
   announceIdx: 0,
   announceHidden: false,
-  openGroup: null,
+  navArea: 'supervisions',
+  navAnim: null,
   trendRange: '12m',
   openMenu: null,
   attnFilter: 'all',
@@ -156,40 +157,24 @@ const state = {
 
 /* Navigation model ----------------------------------------------- */
 
-const NAV = [
-  { id: 'dashboard', label: 'Dashboard', icon: 'grid', route: '/dashboard' },
-  {
-    id: 'supervisions', label: 'Supervisions', icon: 'clipboard', badge: (s) => s.overdue.length + s.review.length,
-    children: [
-      { label: 'Team supervisions', route: '/supervisions/team' },
-      { label: 'Supervision cycle', route: '/supervisions/cycle' },
-      { label: 'Allocation', route: '/supervisions/allocation' },
-      { label: 'New supervision', route: '/supervisions/new' },
-    ],
-  },
-  {
-    id: 'development', label: 'Development', icon: 'target',
-    children: [
-      { label: 'Team PDPs', route: '/development/pdps' },
-      { label: 'Probation reviews', route: '/development/probation' },
-    ],
-  },
-  {
-    id: 'safeguarding', label: 'Safeguarding', icon: 'shield', badge: (s) => s.openFlags.length,
-    children: [
-      { label: 'Triage', route: '/safeguarding/triage' },
-      { label: 'Concerns log', route: '/safeguarding/log' },
-    ],
-  },
-  {
-    id: 'reports', label: 'Reports', icon: 'chart',
-    children: [
-      { label: 'Compliance', route: '/reports/compliance' },
-      { label: 'League table', route: '/reports/league' },
-      { label: 'Reporting suite', route: '/reports/suite' },
-    ],
-  },
+/* Product areas. The top level lists areas; entering one swaps the nav
+   for that area's own menu. Every route belongs to exactly one area. */
+const AREAS = [
+  { id: 'learning', label: 'Learning', icon: 'book', home: '/learning/courses', blurb: 'Courses, learners and assignments',
+    sections: [{ label: 'Learning', items: [['Courses', '/learning/courses'], ['Learners', '/learning/learners'], ['Assignments', '/learning/assignments'], ['Reports', '/learning/reports']] }] },
+  { id: 'competencies', label: 'Competencies', icon: 'award', home: '/competencies/frameworks', blurb: 'Frameworks, assessments and sign-offs',
+    sections: [{ label: 'Competencies', items: [['Frameworks', '/competencies/frameworks'], ['Assessments', '/competencies/assessments'], ['Sign-offs', '/competencies/signoffs'], ['Reports', '/competencies/reports']] }] },
+  { id: 'events', label: 'Events', icon: 'calendar', home: '/events/calendar', blurb: 'Training days, bookings and venues',
+    sections: [{ label: 'Events', items: [['Calendar', '/events/calendar'], ['Bookings', '/events/bookings'], ['Venues', '/events/venues']] }] },
+  { id: 'supervisions', label: 'Supervisions', icon: 'clipboard', home: '/dashboard', blurb: 'Supervision cycle, PDPs, safeguarding and reporting', badge: (s) => s.overdue.length + s.review.length + s.openFlags.length,
+    sections: [
+      { label: 'Supervise', items: [['Dashboard', '/dashboard'], ['Team supervisions', '/supervisions/team'], ['Supervision cycle', '/supervisions/cycle'], ['Allocation', '/supervisions/allocation'], ['New supervision', '/supervisions/new']] },
+      { label: 'Develop', items: [['Team PDPs', '/development/pdps'], ['Probation reviews', '/development/probation']] },
+      { label: 'Safeguard', items: [['Triage', '/safeguarding/triage', (s) => s.openFlags.length], ['Concerns log', '/safeguarding/log']] },
+      { label: 'Report', items: [['Compliance', '/reports/compliance'], ['League table', '/reports/league'], ['Reporting suite', '/reports/suite']] },
+    ] },
 ];
+const areaForRoute = (route) => AREAS.find((ar) => ar.sections.some((sec) => sec.items.some(([, r]) => route === r || route.startsWith(r + '/'))));
 
 const ICONS = {
   grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
@@ -219,6 +204,9 @@ const ICONS = {
   mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 8l9 6 9-6"/></svg>',
   chevR: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
   warnTri: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3l9-16zM12 10v4M12 17h.01"/></svg>',
+  book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 016.5 3H20v15H6.5A2.5 2.5 0 004 20.5v-15zM4 20.5A2.5 2.5 0 016.5 18H20"/></svg>',
+  award: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5.5"/><path d="M8.5 13.5L7 21l5-2.5 5 2.5-1.5-7.5"/></svg>',
+  home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9a1 1 0 01-1 1h-5v-6h-4v6H5a1 1 0 01-1-1v-9z"/></svg>',
   sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
 };
 const ico = (n) => ICONS[n] || '';
@@ -226,28 +214,22 @@ const ico = (n) => ICONS[n] || '';
 /* Rendering: shell ----------------------------------------------- */
 
 function renderNav(s) {
-  const groups = NAV.map((g) => {
-    if (!g.children) {
-      const active = state.route === g.route;
-      return `<li><a class="nav-item ${active ? 'active' : ''}" href="#${g.route}" data-nav>
-        ${ico(g.icon).replace('<svg ', '<svg class="ico" ')}<span class="label">${g.label}</span></a></li>`;
-    }
-    const hasActive = g.children.some((c) => state.route === c.route || state.route.startsWith(c.route + '/'));
-    const open = state.openGroup === g.id;
-    const badge = g.badge ? g.badge(s) : 0;
-    return `<li class="nav-group ${open ? 'open' : ''} ${hasActive ? 'has-active' : ''}">
-      <button class="nav-parent" data-group="${g.id}" aria-expanded="${open}" aria-controls="grp-${g.id}">
-        ${ico(g.icon).replace('<svg ', '<svg class="ico" ')}
-        <span class="label">${g.label}</span>
-        ${badge ? `<span class="nav-badge">${badge}</span>` : ''}
-        ${ico('chev')}
-      </button>
-      <div class="nav-children" id="grp-${g.id}"><ul>
-        ${g.children.map((c) => `<li><a class="nav-item ${state.route === c.route ? 'active' : ''}" href="#${c.route}" data-nav><span class="label">${c.label}</span></a></li>`).join('')}
-      </ul></div>
-    </li>`;
-  }).join('');
-  $('#nav-list').innerHTML = groups;
+  const list = $('#nav-list');
+  const area = AREAS.find((ar) => ar.id === state.navArea);
+  const cur = areaForRoute(state.route);
+  let html;
+  if (!area) {
+    html = `<li><a class="nav-item ${state.route === '/home' ? 'active' : ''}" href="#/home" data-nav>${ico('home').replace('<svg ', '<svg class="ico" ')}<span class="label">Home</span></a></li>
+      <li class="nav-section-label show">Features</li>
+      ${AREAS.map((ar) => { const badge = ar.badge ? ar.badge(s) : 0; return `<li><button class="nav-parent ${cur && cur.id === ar.id ? 'current' : ''}" data-area="${ar.id}">${ico(ar.icon).replace('<svg ', '<svg class="ico" ')}<span class="label">${ar.label}</span>${badge ? `<span class="nav-badge">${badge}</span>` : ''}${ico('chev')}</button></li>`; }).join('')}`;
+  } else {
+    html = `<li><button class="nav-back" id="nav-back">${ico('back')}<span>All features</span></button></li>
+      <li class="nav-area-title">${ico(area.icon).replace('<svg ', '<svg class="ico" ')}<span>${area.label}</span></li>
+      ${area.sections.map((sec) => `${area.sections.length > 1 ? `<li class="nav-section-label show">${sec.label}</li>` : ''}${sec.items.map(([label, route, badge]) => { const n = badge ? badge(s) : 0; return `<li><a class="nav-item ${state.route === route ? 'active' : ''}" href="#${route}" data-nav><span class="label">${label}</span>${n ? `<span class="nav-badge">${n}</span>` : ''}</a></li>`; }).join('')}`).join('')}`;
+  }
+  list.innerHTML = html;
+  const promo = $('#promo'); if (promo && !promo.dataset.dismissed) promo.hidden = state.navArea !== 'supervisions';
+  if (state.navAnim) { list.classList.remove('enter-forward', 'enter-back'); void list.offsetWidth; list.classList.add(state.navAnim); state.navAnim = null; }
 }
 
 function renderTopbar(s) {
@@ -912,7 +894,26 @@ function pageSuite(s) {
     </div>`;
 }
 
+function pageHome(s) {
+  const counts = { supervisions: `${plural(s.openActions, 'open action')} · ${pct(s.compliance)} compliance`, learning: '4 courses due this month', competencies: '2 assessments awaiting sign-off', events: '3 training days booked' };
+  return `${pageHead(`${greeting()}, ${ME.firstName}`, 'Choose a feature to get started.', '', true)}
+    <div class="section" style="padding-top:8px"><div class="launcher">
+      ${AREAS.map((ar) => `<button class="launch-card" data-area-go="${ar.id}">
+        <span class="tile">${ico(ar.icon)}</span>
+        <span class="title">${ar.label}</span>
+        <span class="why">${ar.blurb}</span>
+        <span class="foot"><span class="meta">${counts[ar.id] || ''}</span><span class="cta">Open ${ico('arrow')}</span></span>
+      </button>`).join('')}
+    </div></div>`;
+}
+
+function pageStub(area, label) {
+  return (s) => `${pageHead(label, `${area.label}. This part of myAko is not built in the prototype; it is here so the navigation can be tried end to end.`, '', false)}
+    <div class="section" style="padding-top:8px"><div class="card"><div class="empty"><h3>${esc(label)}</h3>Placeholder page in the ${esc(area.label)} area.</div></div></div>`;
+}
+
 const ROUTES = {
+  '/home': pageHome,
   '/dashboard': pageDashboard,
   '/supervisions/team': pageTeam,
   '/supervisions/cycle': pageCycle,
@@ -926,6 +927,7 @@ const ROUTES = {
   '/reports/league': pageLeague,
   '/reports/suite': pageSuite,
 };
+AREAS.forEach((ar) => ar.sections.forEach((sec) => sec.items.forEach(([label, route]) => { if (!ROUTES[route]) ROUTES[route] = pageStub(ar, label); })));
 
 /* Side panel ----------------------------------------------------- */
 
@@ -1058,10 +1060,6 @@ function doAction(act, id) {
 
 function go(route) { location.hash = '#' + route; }
 
-function groupForRoute(route) {
-  const g = NAV.find((g) => g.children && g.children.some((c) => route === c.route || route.startsWith(c.route + '/')));
-  return g ? g.id : null;
-}
 
 function render() {
   const s = derive();
@@ -1099,8 +1097,9 @@ function setupScrollSpy() {
 function onHashChange() {
   const route = location.hash.replace(/^#/, '') || '/dashboard';
   state.route = ROUTES[route] ? route : '/dashboard';
-  const g = groupForRoute(state.route);
-  if (g) state.openGroup = g;
+  const ar = areaForRoute(state.route);
+  if (state.route === '/home') { if (state.navArea) state.navAnim = 'enter-back'; state.navArea = null; }
+  else if (ar && ar.id !== state.navArea) { state.navAnim = state.navArea ? null : 'enter-forward'; state.navArea = ar.id; }
   if (state.panelMode === 'person') { state.panelMode = 'messages'; state.panelOpen = false; }
   render();
   $('#page').scrollTop = 0;
@@ -1115,16 +1114,15 @@ function openPanel(mode, arg = null) {
 
 document.addEventListener('click', (e) => {
   if (state.openMenu && !e.target.closest('[data-menu-wrap]')) { state.openMenu = null; render(); }
-  const t = e.target.closest('[data-group],[data-scroll],[data-go],[data-person],[data-act],[data-thread],[data-msg-filter],[data-cycle-filter],[data-sort],[data-cal],[data-message],[data-nav],#btn-menu,#btn-chat,#btn-notes,#panel-close,#panel-back,#scrim,#announce-prev,#announce-next,#announce-close,#btn-theme,#promo-close,[data-range],[data-menu],[data-attn-filter],#btn-bell,[data-msg-tab],[data-notif],#notif-readall');
+  const t = e.target.closest('[data-area],[data-area-go],#nav-back,[data-scroll],[data-go],[data-person],[data-act],[data-thread],[data-msg-filter],[data-cycle-filter],[data-sort],[data-cal],[data-message],[data-nav],#btn-menu,#btn-chat,#btn-notes,#panel-close,#panel-back,#scrim,#announce-prev,#announce-next,#announce-close,#btn-theme,#promo-close,[data-range],[data-menu],[data-attn-filter],#btn-bell,[data-msg-tab],[data-notif],#notif-readall');
   if (!t) return;
-  if (t.dataset.group) {
-    const g = NAV.find((x) => x.id === t.dataset.group);
-    const wasOpen = state.openGroup === g.id;
+  if (t.dataset.area || t.dataset.areaGo) {
+    const ar = AREAS.find((x) => x.id === (t.dataset.area || t.dataset.areaGo));
     if (state.navRail) { state.navRail = false; $('#app').classList.remove('nav-rail'); }
-    if (wasOpen && groupForRoute(state.route) !== g.id) { state.openGroup = null; render(); return; }
-    if (groupForRoute(state.route) === g.id) { state.openGroup = wasOpen ? null : g.id; render(); return; }
-    state.openGroup = g.id; go(g.children[0].route); return;
+    if (areaForRoute(state.route) === ar) { state.navArea = ar.id; state.navAnim = 'enter-forward'; render(); return; }
+    state.navArea = null; go(ar.home); return;
   }
+  if (t.id === 'nav-back') { state.navArea = null; state.navAnim = 'enter-back'; render(); return; }
   if (t.dataset.scroll) { const sec = document.getElementById(t.dataset.scroll); if (sec) sec.scrollIntoView({ block: 'start' }); return; }
   if (t.dataset.go) { go(t.dataset.go); return; }
   if (t.hasAttribute('data-nav')) { return; } // plain anchor, hashchange handles it
@@ -1156,7 +1154,7 @@ document.addEventListener('click', (e) => {
     else { state.panelOpen = false; go(n.go); }
     return;
   }
-  if (t.id === 'promo-close') { $('#promo').hidden = true; return; }
+  if (t.id === 'promo-close') { $('#promo').hidden = true; $('#promo').dataset.dismissed = '1'; return; }
   if (t.dataset.menu) { state.openMenu = state.openMenu === t.dataset.menu ? null : t.dataset.menu; render(); return; }
   if (t.dataset.range) { state.trendRange = t.dataset.range; render(); return; }
 });
