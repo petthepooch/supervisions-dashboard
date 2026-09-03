@@ -30,15 +30,6 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg>
         </button>
       </div>
-      <button class="org-select" aria-haspopup="listbox">
-        <span><small>Organisation</small>Ako Health London</span>
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"/></svg>
-      </button>
-      <label class="search">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg>
-        <input id="search-input" type="search" placeholder="Search">
-        <span class="kbd">⌘K</span>
-      </label>
     </div>
     <div class="nav-scroll">
       <ul id="nav-list"></ul>
@@ -50,15 +41,24 @@
         <p>Inspection window opens 1 October. Export your Q1 pack by 25 September.</p>
         <button class="btn sm primary" data-go="/reports/suite">Open reporting suite</button>
       </div>
-      <button class="me">
-        <span class="avatar me-av" id="me-avatar">JO</span>
-        <span class="who"><strong>James Okafor</strong><span>Registered Manager</span></span>
-      </button>
+      <div class="me-wrap" data-menu-wrap>
+        <button class="me" id="btn-role" aria-haspopup="menu" aria-expanded="false">
+          <span class="avatar me-av" id="me-avatar">JO</span>
+          <span class="who"><strong>James Okafor</strong><span id="me-role">Registered Manager · Northfield House</span></span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"/></svg>
+        </button>
+        <div class="menu up" id="role-menu" role="menu" hidden></div>
+      </div>
     </div>
   </nav>
 
   <div class="main">
     <header class="topbar">
+      <label class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg>
+        <input id="search-input" type="search" placeholder="Search people, records, reports">
+        <span class="kbd">⌘K</span>
+      </label>
       <span class="spacer"></span>
       <button class="icon-btn" id="btn-theme" aria-label="Toggle dark mode" title="Toggle dark mode (D)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>

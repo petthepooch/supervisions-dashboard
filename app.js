@@ -147,6 +147,8 @@ const state = {
   announceIdx: 0,
   announceHidden: false,
   navArea: 'supervisions',
+  role: 'rm',
+  roleMenu: false,
   navAnim: null,
   trendRange: '12m',
   openMenu: null,
@@ -232,7 +234,16 @@ function renderNav(s) {
   if (state.navAnim) { list.classList.remove('enter-forward', 'enter-back'); void list.offsetWidth; list.classList.add(state.navAnim); state.navAnim = null; }
 }
 
+function renderRole() {
+  const r = ROLES.find((x) => x.id === state.role);
+  $('#me-role').textContent = `${r.role} · ${r.site}`;
+  const btn = $('#btn-role'); btn.setAttribute('aria-expanded', state.roleMenu);
+  const menu = $('#role-menu'); menu.hidden = !state.roleMenu;
+  menu.innerHTML = `<div class="menu-label">Switch role</div>${ROLES.map((x) => `<button role="menuitemradio" aria-checked="${x.id === state.role}" class="${x.id === state.role ? 'checked' : ''}" data-role="${x.id}"><span class="role-l"><strong>${esc(x.role)}</strong><span>${esc(x.site)} · ${esc(x.org)}</span></span>${x.id === state.role ? ico('check') : ''}</button>`).join('')}<div class="menu-sep"></div><button data-act="profile">Profile and settings</button><button data-act="signout">Sign out</button>`;
+}
+
 function renderTopbar(s) {
+  renderRole();
   $('#btn-chat').classList.toggle('active', state.panelOpen && ['messages', 'thread', 'contacts'].includes(state.panelMode));
   $('#btn-notes').classList.toggle('active', state.panelOpen && state.panelMode === 'notes');
   $('#chat-dot').textContent = s.unread;
@@ -1042,6 +1053,8 @@ function doAction(act, id) {
     case 'message': { const m = MESSAGES.find((x) => x.person === p.id); openPanel('thread', m ? m.id : 'new:' + p.id); return; }
     case 'export': toast('Export queued. You will get it by email in a minute or two.'); return;
     case 'schedule-report': toast('Report scheduled monthly.'); return;
+    case 'profile': state.roleMenu = false; renderRole(); toast('Profile and settings are not in the prototype.'); return;
+    case 'signout': state.roleMenu = false; renderRole(); toast('Signed out (prototype).'); return;
     case 'reassign': toast(`Reassign ${p.name}: pick a new supervisor (not in prototype).`); return;
     case 'create': toast('Draft sent to the supervisee.'); go('/dashboard'); return;
     case 'send-reply': {
@@ -1114,7 +1127,8 @@ function openPanel(mode, arg = null) {
 
 document.addEventListener('click', (e) => {
   if (state.openMenu && !e.target.closest('[data-menu-wrap]')) { state.openMenu = null; render(); }
-  const t = e.target.closest('[data-area],[data-area-go],#nav-back,[data-scroll],[data-go],[data-person],[data-act],[data-thread],[data-msg-filter],[data-cycle-filter],[data-sort],[data-cal],[data-message],[data-nav],#btn-menu,#btn-chat,#btn-notes,#panel-close,#panel-back,#scrim,#announce-prev,#announce-next,#announce-close,#btn-theme,#promo-close,[data-range],[data-menu],[data-attn-filter],#btn-bell,[data-msg-tab],[data-notif],#notif-readall');
+  if (state.roleMenu && !e.target.closest('.me-wrap')) { state.roleMenu = false; renderRole(); }
+  const t = e.target.closest('[data-area],[data-area-go],#nav-back,[data-scroll],[data-go],[data-person],[data-act],[data-thread],[data-msg-filter],[data-cycle-filter],[data-sort],[data-cal],[data-message],[data-nav],#btn-menu,#btn-chat,#btn-notes,#panel-close,#panel-back,#scrim,#announce-prev,#announce-next,#announce-close,#btn-theme,#promo-close,[data-range],[data-menu],[data-attn-filter],#btn-bell,[data-msg-tab],[data-notif],#notif-readall,#btn-role,[data-role]');
   if (!t) return;
   if (t.dataset.area || t.dataset.areaGo) {
     const ar = AREAS.find((x) => x.id === (t.dataset.area || t.dataset.areaGo));
@@ -1154,6 +1168,8 @@ document.addEventListener('click', (e) => {
     else { state.panelOpen = false; go(n.go); }
     return;
   }
+  if (t.id === 'btn-role') { state.roleMenu = !state.roleMenu; renderRole(); return; }
+  if (t.dataset.role) { const r = ROLES.find((x) => x.id === t.dataset.role); state.role = r.id; state.roleMenu = false; renderRole(); toast(`Switched to ${r.role} at ${r.site}. The prototype keeps the manager view.`); return; }
   if (t.id === 'promo-close') { $('#promo').hidden = true; $('#promo').dataset.dismissed = '1'; return; }
   if (t.dataset.menu) { state.openMenu = state.openMenu === t.dataset.menu ? null : t.dataset.menu; render(); return; }
   if (t.dataset.range) { state.trendRange = t.dataset.range; render(); return; }
@@ -1175,6 +1191,7 @@ document.addEventListener('input', (e) => {
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && e.target.id === 'thread-input') { const btn = $('[data-act="send-reply"]'); if (btn) doAction('send-reply', btn.dataset.id); return; }
+  if (e.key === 'Escape' && state.roleMenu) { state.roleMenu = false; renderRole(); return; }
   if (e.key === 'Escape' && state.openMenu) { state.openMenu = null; render(); return; }
   if (e.key === 'Escape' && state.panelOpen) { state.panelOpen = false; render(); }
   if ((e.key === 'd' || e.key === 'D') && !e.metaKey && !e.ctrlKey && !/input|textarea/i.test(e.target.tagName)) toggleTheme();

@@ -239,18 +239,31 @@ svg.i { width: 18px; height: 18px; flex: none; }
 .promo p { color: var(--ink-2); font-size: 13.5px; margin-bottom: 12px; }
 .promo .icon-btn { position: absolute; top: 8px; right: 8px; width: 26px; height: 26px; }
 .promo .icon-btn svg { width: 14px; height: 14px; }
+.me-wrap { position: relative; }
 .me {
   display: flex; align-items: center; gap: 10px; width: 100%;
-  padding: 6px 6px; border-radius: var(--radius-m);
+  padding: 8px 8px; border-radius: var(--radius-m);
   text-align: left;
+  border: 1px solid var(--line); background: var(--surface);
 }
+.me > svg { flex: none; color: var(--ink-3); }
+.me[aria-expanded="true"] { border-color: var(--line-strong); }
+.menu.up { top: auto; bottom: calc(100% + 8px); left: 0; right: 0; min-width: 0; }
+.menu-label { padding: 6px 12px 4px; font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.menu-sep { height: 1px; background: var(--line); margin: 6px 4px; }
+.menu button.checked { background: var(--surface-2); }
+.menu button { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.menu button svg { width: 15px; height: 15px; color: var(--ink); flex: none; }
+.role-l { display: flex; flex-direction: column; min-width: 0; }
+.role-l strong { font-weight: 500; font-size: 14px; }
+.role-l span { font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .me:hover { background: var(--surface-3); }
 .me .who { flex: 1; min-width: 0; }
 .me .who strong { display: block; font-size: 14.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.me .who span { display: block; font-size: 12.5px; color: var(--ink-3); }
+.me .who span { display: block; font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .nav-rail .nav .label, .nav-rail .nav .chev, .nav-rail .nav-badge, .nav-rail .brand-word,
-.nav-rail .org-select, .nav-rail .search, .nav-rail .promo, .nav-rail .me .who, .nav-rail .me svg,
+.nav-rail .org-select, .nav-rail .promo, .nav-rail .me .who, .nav-rail .me > svg,
 .nav-rail .nav-children, .nav-rail .nav-back span, .nav-rail .nav-area-title span, .nav-rail .nav-section-label { display: none; }
 .nav-rail .nav-brand { justify-content: center; padding: 0; flex-direction: column; gap: 10px; }
 .nav-rail .nav-item, .nav-rail .nav-parent { justify-content: center; padding: 10px 0; }
@@ -285,8 +298,9 @@ svg.i { width: 18px; height: 18px; flex: none; }
 .topbar {
   height: var(--header-h); flex: none;
   display: flex; align-items: center; gap: 4px;
-  padding: 0 24px;
+  padding: 0 24px 0 var(--page-pad);
 }
+.topbar .search { flex: 1; max-width: 440px; height: 36px; }
 .topbar .spacer { flex: 1; }
 .icon-btn {
   width: 36px; height: 36px; flex: none;

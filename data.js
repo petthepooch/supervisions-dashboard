@@ -32,6 +32,14 @@ const ME = {
 
 const SITES = ['Northfield House', 'Willow House', 'Elm Court'];
 
+/* Roles James can switch between. The prototype shows the manager view
+   throughout; switching only changes the label and greets the change. */
+const ROLES = [
+  { id: 'rm', role: 'Registered Manager', site: 'Northfield House', org: 'Ako Health London' },
+  { id: 'dm', role: 'Deputy Manager', site: 'Willow House', org: 'Ako Health London' },
+  { id: 'lr', role: 'Learner', site: 'Northfield House', org: 'Ako Health London' },
+];
+
 /* Team. `history` is every supervision record for the person, newest
    last. A record with `signedOff` counts as complete. `submitted`
    without `signedOff` is waiting on the manager. `booked` is a date
